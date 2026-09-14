@@ -12,7 +12,14 @@ RUN go mod download
 COPY . .
 
 # 3. Build the specific server binary
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server-schedule-engine ./cmd/schedule_engine
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" 
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w \
+      -X 'main.Version=${APP_VERSION}' \
+      -X 'main.CommitSHA=${COMMIT_SHA}' \
+      -X 'main.BuildTime=${BUILD_TIME}'" \
+    -o server-schedule-engine ./cmd/schedule_engine
 
 # Stage 2: Create the minimal production image
 FROM alpine:3.24

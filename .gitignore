@@ -2,4 +2,6 @@
 .env.local
 /backend/local_logs/
 /backend/log
+/backend/cmd/*/log
 .vscode/
+/prod

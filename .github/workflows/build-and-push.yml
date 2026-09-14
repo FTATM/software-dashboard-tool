@@ -1,9 +1,11 @@
-name: Build and Push to GHCR
+name: Build and Push Docker Images
 
 on:
   push:
     branches:
       - master
+    tags:
+      - 'v*.*.*'
 
 permissions:
   contents: read
@@ -19,19 +21,19 @@ jobs:
           - name: server-api
             context: ./backend
             dockerfile: ./backend/cmd/api/Dockerfile
-            build_args: SERVER_PORT=8080
+            port_arg: SERVER_PORT=8080
           - name: server-schedule-engine
             context: ./backend
             dockerfile: ./backend/cmd/schedule_engine/Dockerfile
-            build_args: SERVER_PORT=8081
+            port_arg: SERVER_PORT=8081
           - name: server-device-gateway
             context: ./backend
             dockerfile: ./backend/cmd/device_gateway/Dockerfile
-            build_args: SERVER_PORT=8090
+            port_arg: SERVER_PORT=8090
           - name: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
-            build_args: ""
+            port_arg: ""
 
     steps:
       - name: Checkout Code
@@ -47,15 +49,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Lowercase Registry Owner
+      - name: Convert Owner to Lowercase
         id: owner
         run: echo "LOWER_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-      - name: Build and Push
+      - name: Generate UTC Timestamp
+        id: timestamp
+        run: echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+
+      - name: Build and Push Image
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
-          build-args: ${{ matrix.build_args }}
+          build-args: |
+            ${{ matrix.port_arg }}
+            APP_VERSION=${{ github.ref_name }}
+            COMMIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ env.BUILD_TIME }}
+            VITE_APP_VERSION=${{ github.ref_name }}
+            VITE_COMMIT_SHA=${{ github.sha }}
+            VITE_BUILD_TIME=${{ env.BUILD_TIME }}
           tags: ghcr.io/${{ env.LOWER_OWNER }}/${{ matrix.name }}:latest

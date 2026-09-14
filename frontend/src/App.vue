@@ -14,6 +14,12 @@
 
 <script setup>
 import MainLayout from './layouts/MainLayout.vue';
+
+const appVersion = import.meta.env.VITE_APP_VERSION || 'dev';
+const commitSha = import.meta.env.VITE_COMMIT_SHA || 'none';
+const buildTime = import.meta.env.VITE_BUILD_TIME || 'unknown';
+
+console.log(`Version: ${appVersion} (${commitSha}) built at ${buildTime}`);
 </script>
 
 <style>

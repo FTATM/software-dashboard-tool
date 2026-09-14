@@ -19,6 +19,12 @@ import (
 	"github.com/FTATM/software-dashboard-tool/internal/middleware"
 )
 
+var (
+	Version   = "dev"
+	CommitSHA = "none"
+	BuildTime = "unknown"
+)
+
 func main() {
 	logCloser := initLogger()
 	defer func() {

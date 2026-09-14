@@ -10,6 +10,15 @@ RUN bun install
 
 COPY . .
 
+# Accept arguments and set as environment variables for Bun
+ARG VITE_APP_VERSION=dev
+ARG VITE_COMMIT_SHA=none
+ARG VITE_BUILD_TIME=unknown
+
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+ENV VITE_COMMIT_SHA=$VITE_COMMIT_SHA
+ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
+
 # Build the project using Bun
 RUN bun run build
 
