@@ -1,0 +1,171 @@
+services:
+  server-api:
+    build: 
+      context: ./backend
+      dockerfile: cmd/api/Dockerfile 
+      args:
+        SERVER_PORT: "${SERVER_API_PORT:?error: server-api port not set}"
+    # We don't map ports here because only Nginx needs to talk to Go
+    restart: unless-stopped
+    stop_grace_period: 20s
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - LOG_API_DIR=/app/logs
+    volumes:
+      # host_machine_folder : container_folder
+      - ./backend/local_logs/api:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "2"
+  server-schedule-engine:
+    build:
+      context: ./backend
+      dockerfile: cmd/schedule_engine/Dockerfile
+      args:
+        SERVER_PORT: "${SERVER_SCHEDULE_ENGINE_PORT:?error: server-schedule-engine port not set}"
+    restart: unless-stopped
+    stop_grace_period: 20s
+    depends_on:
+      - db
+      - server-api
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - LOG_SCHEDULE_ENGINE_DIR=/app/logs
+    volumes:
+      # host_machine_folder : container_folder
+      - ./backend/local_logs/schedule:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "2"
+  server-device-gateway:
+    build:
+      context: ./backend
+      dockerfile: cmd/device_gateway/Dockerfile
+    ports:
+      - "8090:8090"     # TCP
+      - "8090:8090/udp" # UDP
+      - "8091:8091" # HTTP (Telemetry, Polling, and Internal API)
+    restart: unless-stopped
+    stop_grace_period: 20s
+    depends_on:
+      - db
+      - mqtt-broker
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - LOG_DEVICE_GATEWAY_DIR=/app/logs
+    volumes:
+      - ./backend/local_logs/devicegateway:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "2"
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80" # Maps port 80 on your host machine to port 80 in the container
+    depends_on:
+      - server-api
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Bangkok
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "2m"
+        max-file: "2"
+  mqtt-broker:
+    image: eclipse-mosquitto:2.1-alpine
+    ports:
+      # Expose MQTT standard port to the outside world for devices
+      - "1883:1883" 
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+    restart: unless-stopped
+    depends_on:
+      - db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  nodered:
+    image: nodered/node-red:5.0-debian
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Asia/Bangkok
+    volumes:
+      # Persist all flows, nodes, and credentials
+      - nodered_data:/data
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  garage:
+    image: dxflrs/garage:v2.3.0
+    volumes:
+      - ./garage_config:/etc/garage
+      - garage_data:/var/lib/garage
+    ports:
+      - "3900:3900"
+    environment:
+      - GARAGE_CONFIG_FILE=/etc/garage/garage.toml
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  db:
+    image: timescale/timescaledb:2.29.2-pg18
+    environment:
+      POSTGRES_USER: "${DB_USER:?error: DB_USER not set}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?error: DB_PASSWORD not set}"
+      POSTGRES_DB: "${DB_NAME:?error: DB_NAME not set}"
+    ports:
+      - "${DB_PORT:?error: DB_PORT not set}:5432"
+    volumes:
+      # Mount the init.sql file to run automatically
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/preload.sql:/docker-entrypoint-initdb.d/preload.sql
+      # Persist database data even if the container stops
+      - iotmonitor_postgres_data:/var/lib/postgresql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  iotmonitor_postgres_data:
+  mosquitto_data:
+  nodered_data:
+  garage_data:

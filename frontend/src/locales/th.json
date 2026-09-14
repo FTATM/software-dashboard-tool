@@ -1,0 +1,910 @@
+{
+  "header": {
+    "brand": "Software Dashboard Tool",
+    "defaultUser": "ผู้ใช้งาน",
+    "logout": "ออกจากระบบ",
+    "poweredBy": "โดย บริษัท ฟิลด์เทค ออโตเมชั่น จำกัด"
+  },
+  "login": {
+    "title": "เข้าสู่ระบบ",
+    "subtitle": "กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบแดชบอร์ด",
+    "username": "ชื่อผู้ใช้",
+    "usernamePlaceholder": "กรอกชื่อผู้ใช้ของคุณ",
+    "password": "รหัสผ่าน",
+    "passwordPlaceholder": "กรอกรหัสผ่านของคุณ",
+    "signIn": "เข้าสู่ระบบ",
+    "authenticating": "กำลังตรวจสอบข้อมูล...",
+    "footerNote": "บัญชีผู้ใช้งานจะถูกสร้างและจัดการโดยผู้ดูแลระบบ",
+    "errorConnection": "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตของคุณหรือลองใหม่อีกครั้ง",
+    "invalidLogin": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"
+  },
+  "menu": {
+    "dashboard": "แดชบอร์ด",
+    "canvas": "แคนวาส",
+    "canvasDesign": "ออกแบบแคนวาส",
+    "canvasAccess": "สิทธิ์การเข้าถึงแคนวาส",
+    "scheduler": "กำหนดเวลาทำงาน",
+    "notification": "การแจ้งเตือน",
+    "notifUser": "แจ้งเตือนผู้ใช้งาน",
+    "notifDeviceRule": "แจ้งเตือนเงื่อนไขอุปกรณ์",
+    "logReport": "รายงานบันทึก",
+    "management": "การจัดการระบบ",
+    "user": "ผู้ใช้งาน",
+    "role": "ตำแหน่งและสิทธิ์",
+    "device": "อุปกรณ์",
+    "deviceGroup": "กลุ่มอุปกรณ์"
+  },
+  "settings": {
+    "language": "ภาษา",
+    "theme": "ธีม"
+  },
+  "common": {
+    "id": "รหัส",
+    "actions": "ตัวเลือก",
+    "cancel": "ยกเลิก",
+    "select": "เลือก",
+    "save": "บันทึกการเปลี่ยนแปลง",
+    "create": "สร้าง",
+    "delete": "ลบ",
+    "active": "เปิดใช้งาน",
+    "inactive": "ไม่ใช้งาน",
+    "disabled": "ปิดใช้งาน",
+    "readOnly": "อ่านอย่างเดียว",
+    "confirmDelete": "ยืนยันการลบ",
+    "noAccess": "ไม่มีสิทธิ์เข้าถึง",
+    "export": "ส่งออก",
+    "import": "นำเข้า",
+    "status": "สถานะ",
+    "connect": "เชื่อมต่อแล้ว",
+    "disconnect": "ขาดการเชื่อมต่อ",
+    "yesDelete": "ใช่, ต้องการลบ",
+    "noCancel": "ไม่, ยกเลิก",
+    "closeWindow": "ปิดหน้าต่าง",
+    "user": "ผู้ใช้งาน",
+    "role": "ตำแหน่ง",
+    "device": "อุปกรณ์",
+    "devices": "อุปกรณ์",
+    "deviceId": "รหัสอุปกรณ์",
+    "group": "กลุ่ม",
+    "roleName": "ชื่อตำแหน่ง",
+    "deviceName": "ชื่ออุปกรณ์",
+    "showDeviceName": "แสดงชื่ออุปกรณ์",
+    "description": "คำอธิบาย",
+    "searchDevice": "ค้นหาอุปกรณ์...",
+    "searchGroup": "ค้นหากลุ่ม...",
+    "searchRole": "ค้นหาตำแหน่ง...",
+    "textColor": "สีข้อความ",
+    "waitingData": "กำลังรอข้อมูลสด...",
+    "loading": "กำลังโหลด...",
+    "fetchingHistory": "กำลังดึงข้อมูลย้อนหลัง...",
+    "noDevicesConfig": "ไม่ได้เลือกอุปกรณ์ กรุณาเปิดการตั้งค่าเพื่อเพิ่มแหล่งข้อมูล",
+    "noDevicesSelected": "ไม่ได้เลือกอุปกรณ์ กรุณาเลือกอุปกรณ์ในแท็บการตั้งค่าทั่วไปก่อน",
+    "noDataAvailable": "ไม่มีข้อมูล",
+    "chartAppearance": "ลักษณะกราฟ",
+    "deviceColors": "สีของอุปกรณ์",
+    "noDevice": "ไม่ได้เลือกอุปกรณ์",
+    "name": "ชื่อ",
+    "color": "สี",
+    "maxValue": "ค่าสูงสุด",
+    "prefix": "คำนำหน้า",
+    "prefixPlaceholder": "เช่น $",
+    "unitLabel": "หน่วยวัด",
+    "unitSuffix": "หน่วยวัด (คำต่อท้าย)",
+    "unitPlaceholder": "เช่น °C, MB/s",
+    "fontSize": "ขนาดตัวอักษร (พิกเซล)",
+    "subtextDescription": "ข้อความรอง / คำอธิบาย",
+    "subtextPlaceholder": "พิมพ์ที่นี่ กด Enter เพื่อขึ้นบรรทัดใหม่...",
+    "show": "แสดงผล:",
+    "rows": "แถว",
+    "time": "เวลา",
+    "addZone": "+ เพิ่มโซน",
+    "maxDataPoints": "จำนวนจุดข้อมูลสูงสุด",
+    "cornerRadius": "ความโค้งมน (พิกเซล)",
+    "smoothCurve": "ทำเส้นโค้งให้เรียบ",
+    "timeRange": "ช่วงเวลา",
+    "from": "จากวันที่",
+    "to": "ถึงวันที่",
+    "today": "วันนี้",
+    "current": "ตอนนี้",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบ",
+    "timeRanges": {
+      "live": "ข้อมูลสดเท่านั้น",
+      "m15": "15 นาทีที่ผ่านมา",
+      "m30": "30 นาทีที่ผ่านมา",
+      "h1": "1 ชั่วโมงที่ผ่านมา",
+      "h3": "3 ชั่วโมงที่ผ่านมา",
+      "h6": "6 ชั่วโมงที่ผ่านมา",
+      "h24": "24 ชั่วโมงที่ผ่านมา",
+      "d7": "7 วันที่ผ่านมา",
+      "d30": "30 วันที่ผ่านมา",
+      "M3": "3 เดือนที่ผ่านมา",
+      "M6": "6 เดือนที่ผ่านมา",
+      "y1": "1 ปีที่ผ่านมา",
+      "custom": "กำหนดช่วงเวลาเอง..."
+    },
+    "historyRange": "ช่วงข้อมูลย้อนหลัง",
+    "decimalPlaces": "ตำแหน่งทศนิยม",
+    "none": "ไม่มี",
+    "protocol": "โปรโตคอล",
+    "protocolPlaceholder": "เลือกโปรโตคอล...",
+    "command": "คำสั่ง",
+    "default": "ค่าเริ่มต้น",
+    "overridesCount": "+ {count} รายการแยก",
+    "groupCommandSettings": "การตั้งค่าคำสั่งกลุ่ม",
+    "baseCommandGroup": "คำสั่งหลักสำหรับกลุ่ม",
+    "enableOverrides": "เปิดใช้งานคำสั่งแยกรายอุปกรณ์",
+    "deviceOverridesOptional": "คำสั่งแยกรายอุปกรณ์ (ไม่บังคับ)",
+    "noDevicesAssigned": "ปัจจุบันยังไม่มีอุปกรณ์ในกลุ่มนี้",
+    "display": "แสดงผล",
+    "update": "แก้ไขข้อมูล",
+    "query": "สืบค้น",
+    "onHold": "กดค้าง...",
+    "displayOptions": "ตัวเลือกการแสดงผล",
+    "validation": {
+      "maxLength": "ความยาวสูงสุดไม่เกิน {len} ตัวอักษร"
+    },
+    "messages": {
+      "createSuccess": "สร้าง{item}สำเร็จ!",
+      "updateSuccess": "อัปเดต{item}สำเร็จ!",
+      "saveSuccess": "บันทึก{item}สำเร็จ!",
+      "deleteSuccess": "ลบ{item}สำเร็จ!",
+      "saveFailed": "ไม่สามารถบันทึก{item}ได้",
+      "loadFailed": "ไม่สามารถโหลดข้อมูล{item}ได้",
+      "createFailed": "ไม่สามารถสร้าง{item}ได้",
+      "updateFailed": "ไม่สามารถอัปเดต{item}ได้",
+      "deleteFailed": "ไม่สามารถลบ{item}ได้",
+      "created": "สร้างสำเร็จ!",
+      "updated": "อัปเดตสำเร็จ!",
+      "saved": "บันทึกสำเร็จ!",
+      "deleted": "ลบสำเร็จ!",
+      "saveError": "ไม่สามารถบันทึกได้",
+      "loadError": "ไม่สามารถโหลดข้อมูลได้",
+      "createError": "ไม่สามารถสร้างได้",
+      "updateError": "ไม่สามารถอัปเดตได้",
+      "deleteError": "ไม่สามารถลบได้",
+      "duplicateError": "มีข้อมูลซ้ำ {item}",
+      "noAccessError": "ไม่มีสิทธิ์เข้าถึง",
+      "deleteFailedInUsed": "ไม่สามารถลบได้เพราะมีการใช้งานอยู่: {item}",
+      "invalidBody": "ข้อมูลผิด",
+      "inActive": "ไม่ได้เปิดใช้งาน"
+    }
+  },
+  "role": {
+    "title": "การจัดการตำแหน่ง",
+    "subtitle": "จัดการตำแหน่งผู้ใช้งานและกำหนดสิทธิ์การเข้าถึงระบบ",
+    "addRole": "เพิ่มตำแหน่ง",
+    "editRole": "แก้ไขตำแหน่ง",
+    "createRole": "สร้างตำแหน่งใหม่",
+    "roleNamePlaceholder": "เช่น Administrator, Manager, Viewer",
+    "permissions": "สิทธิ์ของตำแหน่ง",
+    "selectAll": "เลือกทั้งหมด",
+    "deselectAll": "ยกเลิกการเลือกทั้งหมด",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบตำแหน่ง \"{name}\" อย่างถาวร? การกระทำนี้ไม่สามารถย้อนกลับได้ หากมีการใช้งานอยู่จะไม่สามารถลบได้",
+    "validation": {
+      "roleNameRequired": "กรุณาระบุชื่อตำแหน่ง"
+    }
+  },
+  "user": {
+    "title": "การจัดการผู้ใช้งาน",
+    "subtitle": "จัดการสิทธิ์การเข้าถึงระบบและสร้างบัญชีผู้ใช้ใหม่",
+    "addUser": "เพิ่มผู้ใช้งาน",
+    "editUser": "แก้ไขข้อมูลผู้ใช้งาน",
+    "createUser": "สร้างผู้ใช้งานใหม่",
+    "name": "ชื่อ-นามสกุล",
+    "firstName": "ชื่อ",
+    "lastName": "นามสกุล",
+    "email": "อีเมล",
+    "phone": "เบอร์โทรศัพท์",
+    "username": "ชื่อผู้ใช้",
+    "password": "รหัสผ่าน",
+    "assignedRole": "ตำแหน่งที่กำหนด",
+    "passwordHint": "เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน",
+    "accountStatus": "สถานะบัญชี",
+    "accountStatusDesc": "อนุญาตให้ผู้ใช้นี้เข้าสู่ระบบและใช้งานระบบได้",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ \"{name}\" อย่างถาวร? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "validation": {
+      "firstNameRequired": "กรุณาระบุชื่อ",
+      "lastNameRequired": "กรุณาระบุนามสกุล",
+      "emailInvalid": "รูปแบบอีเมลไม่ถูกต้อง",
+      "usernameRequired": "กรุณาระบุชื่อผู้ใช้",
+      "usernameMin": "ชื่อผู้ใช้ต้องมีความยาวอย่างน้อย 4 ตัวอักษร",
+      "passwordRequired": "กรุณาระบุรหัสผ่าน",
+      "passwordMin": "รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร",
+      "roleRequired": "กรุณาเลือกตำแหน่ง"
+    }
+  },
+  "deviceGroup": {
+    "title": "การจัดการกลุ่มอุปกรณ์",
+    "subtitle": "จัดกลุ่มอุปกรณ์เข้าด้วยกันเพื่อให้ง่ายต่อการจัดการ",
+    "addGroup": "เพิ่มกลุ่ม",
+    "editGroup": "แก้ไขกลุ่มอุปกรณ์",
+    "createGroup": "สร้างกลุ่มใหม่",
+    "groupName": "ชื่อกลุ่ม",
+    "groupNamePlaceholder": "เช่น สาขากรุงเทพ",
+    "descriptionPlaceholder": "คำอธิบายเพิ่มเติม (ไม่บังคับ)...",
+    "assignDevices": "กำหนดอุปกรณ์",
+    "assignDevicesDesc": "สามารถเลือกได้หลายอุปกรณ์",
+    "deleteWarning": "ลบกลุ่ม \"{name}\" หรือไม่? การกระทำนี้จะไม่ลบอุปกรณ์ที่อยู่ในกลุ่ม ลบเพียงการจัดกลุ่มเท่านั้น",
+    "validation": {
+      "groupNameRequired": "กรุณาระบุชื่อกลุ่ม"
+    }
+  },
+  "device": {
+    "title": "การจัดการอุปกรณ์",
+    "subtitle": "จัดการอุปกรณ์ในระบบและค่าคอนฟิกูเรชัน",
+    "addDevice": "เพิ่มอุปกรณ์",
+    "editDevice": "แก้ไขคอนฟิกอุปกรณ์",
+    "createDevice": "ลงทะเบียนอุปกรณ์ใหม่",
+    "deviceNamePlaceholder": "เช่น เซ็นเซอร์หลัก",
+    "activeStatus": "สถานะการทำงาน",
+    "activeStatusDesc": "สลับเพื่อเปิดหรือปิดใช้งานการตรวจสอบ",
+    "networkStatus": "สถานะเครือข่าย",
+    "testConnection": "ทดสอบการเชื่อมต่อ",
+    "deviceStatus": "สถานะอุปกรณ์",
+    "lastSeenAt": "พบครั้งล่าสุดเมื่อ",
+    "neverConnected": "ไม่เคยเชื่อมต่อ",
+    "deleteWarning": "ต้องการลบ \"{name}\" หรือไม่?",
+    "cannotPingNoProtocol": "ไม่สามารถทดสอบสถานะได้หากไม่มีโปรโตคอล",
+    "import": {
+      "title": "นำเข้าข้อมูลอุปกรณ์",
+      "requirementsTitle": "ข้อกำหนดสำหรับไฟล์นำเข้า:",
+      "supportedFormats": "รูปแบบที่รองรับ: CSV, Excel (.xlsx), หรือ JSON.",
+      "requiredColumns": "คอลัมน์/คีย์ที่ต้องการ:",
+      "validateFile": "ตรวจสอบไฟล์",
+      "validation": "การตรวจสอบ",
+      "message": "ข้อความ",
+      "pass": "ผ่าน",
+      "error": "ข้อผิดพลาด",
+      "confirmImport": "ยืนยันและนำเข้า"
+    },
+    "validation": {
+      "deviceNameRequired": "กรุณาระบุชื่ออุปกรณ์",
+      "protocolRequired": "กรุณาเลือกโปรโตคอล"
+    },
+    "messages": {
+      "pingSuccess": "ปิงสำเร็จ: อุปกรณ์กำลังออนไลน์!",
+      "pingOffline": "ปิงเสร็จสิ้น: ขณะนี้อุปกรณ์ออฟไลน์",
+      "pingFailed": "ไม่สามารถทดสอบการเชื่อมต่อปลายทางของอุปกรณ์ได้",
+      "importSuccess": "นำเข้าอุปกรณ์จำนวน {count} รายการสำเร็จ!",
+      "exportSuccess": "ดาวน์โหลดไฟล์ {format} สำเร็จ!",
+      "importFailed": "ไม่สามารถนำเข้าข้อมูลอุปกรณ์ได้",
+      "exportFailed": "ไม่สามารถส่งออกไฟล์ {format} ได้"
+    }
+  },
+  "notifDevice": {
+    "title": "กฎการแจ้งเตือนอุปกรณ์",
+    "subtitle": "กำหนดเงื่อนไขและข้อความแจ้งเตือน",
+    "addRule": "เพิ่มกฎ",
+    "alertMessage": "ข้อความแจ้งเตือน",
+    "logicCondition": "เงื่อนไข",
+    "noReason": "ไม่ได้ระบุเหตุผล",
+    "ifValue": "ถ้าค่า",
+    "editRule": "แก้ไขกฎการแจ้งเตือน",
+    "createRule": "สร้างกฎการแจ้งเตือน",
+    "targetDevice": "อุปกรณ์เป้าหมาย",
+    "condition": "เงื่อนไข",
+    "thresholdValue": "ค่าที่กำหนด (Threshold)",
+    "thresholdPlaceholder": "เช่น 100",
+    "alertMessageReason": "ข้อความแจ้งเตือน (เหตุผล)",
+    "alertMessagePlaceholder": "เช่น ห้องเซิร์ฟเวอร์หลักอุณหภูมิสูงเกินไป",
+    "alertMessageDesc": "ข้อความนี้จะถูกแนบไปกับการแจ้งเตือนที่ส่งถึงผู้ใช้งาน",
+    "ruleStatus": "สถานะกฎ",
+    "ruleStatusDesc": "หากปิดใช้งาน เงื่อนไขนี้จะถูกเพิกเฉย",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบกฎการแจ้งเตือนสำหรับ \"{name}\"? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "validation": {
+      "deviceRequired": "กรุณาเลือกอุปกรณ์",
+      "thresholdRequired": "กรุณาระบุค่าที่กำหนด",
+      "mustBeNumber": "ต้องเป็นตัวเลขเท่านั้น"
+    }
+  },
+  "notifUser": {
+    "title": "การแจ้งเตือนผู้ใช้งาน",
+    "subtitle": "ตั้งค่าการแจ้งเตือนผ่าน SMS และอีเมลสำหรับบัญชีผู้ใช้",
+    "contactInfo": "ข้อมูลติดต่อ",
+    "emailAlerts": "การแจ้งเตือนผ่านอีเมล",
+    "smsAlerts": "การแจ้งเตือนผ่าน SMS",
+    "noEmail": "ไม่มีอีเมล",
+    "noPhone": "ไม่มีเบอร์โทรศัพท์",
+    "enabled": "เปิดใช้งาน",
+    "configure": "ตั้งค่า",
+    "settingsTitle": "ตั้งค่าการแจ้งเตือน",
+    "settingsSubtitle": "ตั้งค่าช่องทางการรับข้อมูลสำหรับ {name}",
+    "emailDest": "อีเมลปลายทาง",
+    "missingEmail": "ไม่มีข้อมูลอีเมลในโปรไฟล์",
+    "smsDest": "เบอร์โทรศัพท์ปลายทาง",
+    "missingPhone": "ไม่มีข้อมูลเบอร์โทรศัพท์ในโปรไฟล์",
+    "emailAlertsDesc": "รับการแจ้งเตือนและข่าวสารของระบบผ่านอีเมล",
+    "smsAlertsDesc": "รับการแจ้งเตือนเหตุขัดข้องเร่งด่วนผ่านข้อความ SMS",
+    "messages": {
+      "loadFailed": "ไม่สามารถโหลดข้อมูลการตั้งค่าการแจ้งเตือนได้",
+      "updateSuccess": "อัปเดตการตั้งค่าการแจ้งเตือนสำเร็จ!",
+      "updateFailed": "ไม่สามารถอัปเดตการตั้งค่าการแจ้งเตือนได้"
+    }
+  },
+  "logReport": {
+    "title": "บันทึกระบบและอุปกรณ์",
+    "subtitle": "ดู กรอง และส่งออกบันทึกการตรวจสอบระบบและข้อมูลโทรมาตรของอุปกรณ์",
+    "tabSystem": "บันทึกระบบ",
+    "tabDevice": "บันทึกอุปกรณ์",
+    "selectStartDate": "เลือกวันที่เริ่มต้น",
+    "selectEndDate": "เลือกวันที่สิ้นสุด",
+    "menuTypes": "ประเภทเมนู",
+    "selectMenus": "เลือกเมนู...",
+    "keywordSearch": "ค้นหาคำสำคัญ",
+    "searchPlaceholder": "ค้นหารหัสเอนทิตี หรือ ผู้ใช้...",
+    "applyFilters": "ใช้ตัวกรอง",
+    "table": {
+      "timestamp": "เวลา",
+      "action": "การกระทำ",
+      "menu": "เมนู",
+      "entity": "เอนทิตี",
+      "entityId": "รหัสเอนทิตี",
+      "source": "แหล่งที่มา",
+      "value": "ค่า"
+    }
+  },
+  "scheduler": {
+    "title": "ตัวจัดการตารางเวลา",
+    "subtitle": "กำหนดเวลาและจัดการงานอัตโนมัติสำหรับอุปกรณ์และกลุ่มของคุณ",
+    "addSchedule": "เพิ่มตารางเวลา",
+    "noTarget": "ไม่มีเป้าหมาย",
+    "unknownDevice": "ไม่รู้จักอุปกรณ์",
+    "unknownGroup": "ไม่รู้จักกลุ่ม",
+    "typeOneTime": "ครั้งเดียว",
+    "typeRecurring": "เกิดซ้ำ",
+    "editSchedule": "แก้ไขตารางเวลา",
+    "createSchedule": "สร้างตารางเวลาใหม่",
+    "targetType": "ประเภทเป้าหมาย",
+    "selectTargetDevice": "เลือกอุปกรณ์เป้าหมาย",
+    "selectTargetGroup": "เลือกกลุ่มเป้าหมาย",
+    "taskCommand": "คำสั่งงาน / ค่า",
+    "taskCommandPlaceholder": "เช่น reboot, 0, 1",
+    "scheduleType": "ประเภทตารางเวลา",
+    "oneTimeEvent": "ครั้งเดียว",
+    "recurringCron": "เกิดซ้ำ (Cron)",
+    "runFrequency": "ความถี่ในการทำงาน",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบ?",
+    "freq": {
+      "min5": "ทุก 5 นาที",
+      "min15": "ทุก 15 นาที",
+      "hour1": "ทุก 1 ชั่วโมง",
+      "midnight": "ทุกวันเวลาเที่ยงคืน",
+      "am8": "ทุกวันเวลา 8:00 น.",
+      "custom": "กำหนดรูปแบบเอง..."
+    },
+    "customCron": "รูปแบบ Cron แบบกำหนดเอง",
+    "customCronHint": "เช่น 0 12 * * 1",
+    "endTime": "เวลาสิ้นสุด (ไม่บังคับ)",
+    "selectEndTime": "เลือกวันที่และเวลาสิ้นสุด",
+    "startTime": "วันที่และเวลาเริ่มต้น",
+    "selectStartTime": "เลือกวันที่และเวลาเริ่มต้น",
+    "saving": "กำลังบันทึก...",
+    "saveSchedule": "บันทึกตารางเวลา",
+    "customTime": "กำหนดเวลาเอง",
+    "customTimeHint": "เลือกเวลาและวันที่ต้องการให้ทำงาน",
+    "advancedMode": "โหมด Cron ขั้นสูง",
+    "advanced": "ขั้นสูง",
+    "cronParts": {
+      "minute": "นาที",
+      "hour": "ชั่วโมง",
+      "day": "วัน",
+      "month": "เดือน",
+      "week": "สัปดาห์"
+    },
+    "table": {
+      "id": "รหัสตารางเวลา",
+      "target": "เป้าหมาย",
+      "taskAction": "งาน / คำสั่ง",
+      "type": "ประเภท",
+      "startTime": "เวลาเริ่มต้น"
+    },
+    "days": {
+      "sun": "อา.",
+      "mon": "จ.",
+      "tue": "อ.",
+      "wed": "พ.",
+      "thu": "พฤ.",
+      "fri": "ศ.",
+      "sat": "ส."
+    },
+    "status": {
+      "active": "กำลังทำงาน",
+      "completed": "เสร็จสิ้น",
+      "cancelled": "ยกเลิก",
+      "noProtocol": "ไม่มีโปรโตคอล",
+      "overdue": "เลยกำหนด"
+    },
+    "validation": {
+      "selectDevice": "กรุณาเลือกอุปกรณ์เป้าหมาย",
+      "selectGroup": "กรุณาเลือกกลุ่มเป้าหมาย",
+      "startTimeRequired": "กรุณาระบุเวลาเริ่มต้น",
+      "taskCommandRequired": "กรุณาระบุคำสั่งงาน",
+      "cronRequired": "กรุณาระบุรูปแบบ Cron แบบกำหนดเอง"
+    }
+  },
+  "canvasAccess": {
+    "title": "การจัดการสิทธิ์แคนวาส",
+    "subtitle": "กำหนดตำแหน่งที่ได้รับอนุญาตให้เข้าถึงและมองเห็นแคนวาสต่างๆ",
+    "assignedCanvases": "แคนวาสที่กำหนด",
+    "noAccess": "ไม่มีสิทธิ์เข้าถึง",
+    "manageAccessFor": "จัดการสิทธิ์สำหรับ:",
+    "noCanvasesAvailable": "ไม่มีแคนวาสในระบบ",
+    "unknownCanvas": "ไม่รู้จักแคนวาส",
+    "messages": {
+      "updateSuccess": "อัปเดตสิทธิ์สำหรับ {name} สำเร็จ",
+      "updateFailed": "ไม่สามารถอัปเดตการจับคู่สิทธิ์ได้"
+    }
+  },
+  "canvasDesign": {
+    "title": "การออกแบบแคนวาส",
+    "widgetsTitle": "วิดเจ็ต",
+    "availableWidgets": "รายการวิดเจ็ต",
+    "dragToCanvas": "ลากไปยังแคนวาส",
+    "editingCanvas": "กำลังแก้ไขแคนวาส:",
+    "editorMode": "โหมดแก้ไข",
+    "hideGrid": "ซ่อนตาราง",
+    "showGrid": "แสดงตาราง",
+    "locked": "ล็อก",
+    "unlocked": "ปลดล็อก",
+    "canvasStyle": "สไตล์แคนวาส",
+    "resetLayout": "รีเซ็ตเค้าโครง",
+    "configureWidget": "ตั้งค่าวิดเจ็ต",
+    "deleteWidget": "ลบวิดเจ็ต",
+    "canvasBackground": "พื้นหลังแคนวาส",
+    "backgroundStyle": "สไตล์พื้นหลัง",
+    "solid": "สีทึบ",
+    "gradient": "ไล่สี",
+    "start": "จุดเริ่มต้น",
+    "end": "จุดสิ้นสุด",
+    "angle": "มุมองศา",
+    "directions": {
+      "diagonal1": "แนวทแยง (↘)",
+      "horizontal": "แนวนอน (→)",
+      "vertical": "แนวตั้ง (↓)",
+      "diagonal2": "แนวทแยง (↗)"
+    },
+    "applyStyle": "บันทึกสไตล์",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบวิดเจ็ตนี้ออกจากแคนวาส?",
+    "widgetConfig": "การตั้งค่าวิดเจ็ต",
+    "generalSettings": "การตั้งค่าทั่วไป",
+    "chartConfig": "การตั้งค่ากราฟ",
+    "widgetLabel": "ป้ายชื่อวิดเจ็ต",
+    "dataSource": "แหล่งข้อมูล",
+    "selectOneDevice": "เลือก 1 อุปกรณ์",
+    "noDevicesInGroup": "ไม่พบอุปกรณ์ในกลุ่มนี้",
+    "noSourceRequired": "วิดเจ็ตประเภทนี้ไม่จำเป็นต้องเลือกอุปกรณ์แหล่งข้อมูล",
+    "gridPosition": "ตำแหน่งและขนาด",
+    "xCol": "แกน X (คอลัมน์)",
+    "yRow": "แกน Y (แถว)",
+    "width": "ความกว้าง",
+    "height": "ความสูง",
+    "saveSettings": "บันทึกการตั้งค่า",
+    "newWidget": "{type} ใหม่",
+    "widgets": {
+      "barChart": "กราฟแท่ง",
+      "rowChart": "กราฟแท่งแนวนอน",
+      "bulletChart": "กราฟแบบบุลเล็ต",
+      "analogueGauge": "เกจแบบเข็ม",
+      "digitalGauge": "เกจตัวเลข",
+      "lineChart": "กราฟเส้น",
+      "pieChart": "กราฟวงกลม",
+      "scatterChart": "กราฟจุด",
+      "barProcess": "กระบวนการแบบแท่ง",
+      "barLineChart": "กราฟแท่งและเส้น",
+      "status": "สถานะ",
+      "table": "ตารางข้อมูล",
+      "alert": "การแจ้งเตือน",
+      "text": "ข้อความ",
+      "scoreCard": "สกอร์การ์ด",
+      "inputAction": "อินพุต",
+      "visualization": "ภาพแสดง"
+    }
+  },
+  "canvas": {
+    "title": "การจัดการแคนวาส",
+    "subtitle": "สร้าง เปลี่ยนชื่อ และลบแคนวาสแดชบอร์ด",
+    "createCanvas": "สร้างแคนวาส",
+    "renameCanvas": "เปลี่ยนชื่อแคนวาส",
+    "createNewCanvas": "สร้างแคนวาสใหม่",
+    "canvasName": "ชื่อแคนวาส",
+    "canvasNamePlaceholder": "เช่น แดชบอร์ดหลัก",
+    "deleteCanvas": "ลบแคนวาส",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบ \"{name}\"?",
+    "deleteWarningDesc": "การกระทำนี้ไม่สามารถย้อนกลับได้ และจะลบวิดเจ็ตทั้งหมดที่ตั้งค่าไว้บนแคนวาสนี้",
+    "validation": {
+      "canvasNameRequired": "กรุณาระบุชื่อแคนวาส"
+    },
+    "messages": {
+      "renameSuccess": "เปลี่ยนชื่อแคนวาสสำเร็จ!"
+    }
+  },
+  "dashboard": {
+    "dataQuery": "สืบค้นข้อมูล",
+    "executeDataQuery": "ประมวลผลการสืบค้นข้อมูล",
+    "queryString": "คำสั่งสืบค้น (Query)",
+    "queryPlaceholder": "SELECT * FROM device",
+    "run": "ประมวลผล",
+    "resultOutput": "ผลลัพธ์ข้อมูล",
+    "noResults": "ไม่พบผลลัพธ์สำหรับการสืบค้นนี้",
+    "enterQueryPrompt": "ป้อนคำสั่งสืบค้นด้านบนแล้วกด ประมวลผล เพื่อดูข้อมูล",
+    "messages": {
+      "querySuccess": "ประมวลผลการสืบค้นสำเร็จ!",
+      "queryFailed": "ไม่สามารถประมวลผลการสืบค้นได้"
+    }
+  },
+  "noAccess": {
+    "verifying": "กำลังตรวจสอบการเชื่อมต่อ...",
+    "connectionLost": "ขาดการเชื่อมต่อ",
+    "connectionLostDesc": "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ในขณะนี้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณหรือลองใหม่อีกครั้งในภายหลัง",
+    "tryAgain": "ลองใหม่อีกครั้ง",
+    "accessDenied": "ปฏิเสธการเข้าถึง",
+    "accessDeniedDesc": "คุณไม่มีสิทธิ์ในการเข้าถึงหน้านี้ หากคุณคิดว่านี่คือข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ",
+    "returnDashboard": "กลับสู่หน้าแดชบอร์ด"
+  },
+  "searchableDropdown": {
+    "noResults": "ไม่พบผลลัพธ์สำหรับ \"{query}\"",
+    "searchPlaceholder": "ค้นหา...",
+    "selectAll": "เลือกทั้งหมด",
+    "clearAll": "ล้างทั้งหมด"
+  },
+  "tableData": {
+    "searchPlaceholder": "ค้นหาทุกคอลัมน์...",
+    "matchCase": "ตัวพิมพ์ใหญ่-เล็กตรงกัน",
+    "wholeWord": "ตรงกันทั้งคำ",
+    "noRecords": "ไม่พบข้อมูลที่ตรงกัน",
+    "rowsPerPage": "จำนวนแถวต่อหน้า:",
+    "showing": "แสดง",
+    "to": "ถึง",
+    "of": "จาก",
+    "records": "รายการ",
+    "page": "หน้า {current} จาก {total}"
+  },
+  "alertWidget": {
+    "noAlerts": "ไม่มีการแจ้งเตือนที่จะแสดง",
+    "latestReading": "ค่าล่าสุด:",
+    "hitTime": "พบเมื่อ:",
+    "noHit": "ยังไม่มีข้อมูล",
+    "config": {
+      "maxAlerts": "จำนวนการแจ้งเตือนสูงสุดที่แสดง",
+      "includeResolved": "รวมสถานะปกติ/แก้ไขแล้ว (ค่าเริ่มต้น)",
+      "compactMode": "โหมดกะทัดรัด (ซ่อนคำอธิบาย)",
+      "thresholdsTitle": "เงื่อนไขและป้ายกำกับการแจ้งเตือน",
+      "ifValue": "ถ้าค่า",
+      "fallbackState": "สถานะค่าเริ่มต้น (สถานะปกติ)",
+      "evaluationRule": "* ระบบประเมินเงื่อนไขจากบนลงล่าง หากไม่ตรงกับเงื่อนไขใดเลย อุปกรณ์จะแสดงสถานะล่างสุด",
+      "defaultCritName": "วิกฤต",
+      "defaultWarnName": "เตือน",
+      "defaultResName": "ปกติ",
+      "resetHits": "รีเซ็ตเวลาที่บันทึกไว้"
+    }
+  },
+  "analogueGauge": {
+    "newGauge": "เกจแบบเข็มใหม่",
+    "config": {
+      "scaleSettings": "การตั้งค่าสเกล",
+      "minValue": "ค่าต่ำสุด",
+      "colorZones": "โซนสีและระดับ",
+      "enableZones": "เปิดใช้งานการแบ่งโซนสีแบบกำหนดเอง",
+      "gradeLabels": "ป้ายกำกับระดับ",
+      "showGradeText": "แสดงข้อความระดับ",
+      "textSize": "ขนาดตัวอักษร",
+      "gradeZones": "โซนระดับ",
+      "upTo": "ถึง:",
+      "noZones": "ยังไม่ได้ตั้งค่าโซนระดับ",
+      "gradeName": "ชื่อระดับ",
+      "errors": {
+        "maxMismatch": "ขีดจำกัดของระดับที่สูงที่สุดต้องตรงกับค่าสูงสุด ({max}) พอดี",
+        "minMismatch": "ขีดจำกัดของระดับทั้งหมดต้องมากกว่าค่าต่ำสุด ({min})",
+        "minMaxInvalid": "ค่าต่ำสุดต้องน้อยกว่าค่าสูงสุดเสมอ"
+      }
+    }
+  },
+  "barChart": {
+    "newChart": "กราฟแท่งใหม่",
+    "config": {
+      "yAxisLabel": "ป้ายกำกับหน่วยแกน Y",
+      "yAxisPlaceholder": "เช่น MB/s, °C"
+    }
+  },
+  "barLineChart": {
+    "newChart": "แนวโน้มแบบแท่งและเส้น",
+    "config": {
+      "dataGrouping": "การจัดกลุ่มข้อมูลย้อนหลัง",
+      "bucketInterval": "ช่วงการจัดกลุ่ม",
+      "intervals": {
+        "hour": "ต่อชั่วโมง",
+        "day": "ต่อวัน",
+        "month": "ต่อเดือน"
+      },
+      "aggregation": "รูปแบบการรวม",
+      "lineGlobalAvg": "ค่าเฉลี่ยทั้งหมด",
+      "aggregations": {
+        "sum": "ผลรวม (Sum)",
+        "avg": "ค่าเฉลี่ย",
+        "max": "ค่าสูงสุด",
+        "min": "ค่าต่ำสุด"
+      },
+      "visualsTitle": "ลักษณะและสีกราฟ",
+      "barColor": "สีของกราฟแท่ง",
+      "lineColor": "สีของกราฟเส้น",
+      "barLegendName": "ชื่อคำอธิบายกราฟแท่ง",
+      "barLegendPlaceholder": "เช่น ยอดขาย",
+      "lineLegendName": "ชื่อคำอธิบายกราฟเส้น",
+      "lineLegendPlaceholder": "เช่น แนวโน้ม",
+      "yAxisLabel": "ป้ายกำกับหน่วยแกน Y",
+      "yAxisPlaceholder": "เช่น ยอดขาย, kWh"
+    }
+  },
+  "barProcess": {
+    "newChart": "กระบวนการแบบแท่งใหม่",
+    "config": {
+      "dataConfig": "การตั้งค่าข้อมูล",
+      "maxGoal": "ค่าเป้าหมายสูงสุด",
+      "showValues": "แสดงค่าความคืบหน้าทางด้านขวา",
+      "barStyling": "สไตล์ของกราฟแท่ง",
+      "thickness": "ความหนา (พิกเซล)",
+      "trackColor": "สีพื้นหลังของแท่ง"
+    }
+  },
+  "bulletChart": {
+    "newChart": "กราฟบุลเล็ตใหม่",
+    "actualValue": "ค่าจริง",
+    "target": "เป้าหมาย",
+    "config": {
+      "performanceBar": "แถบประสิทธิภาพ",
+      "targetMarker": "จุดเครื่องหมายเป้าหมาย",
+      "scaleTarget": "สเกลและเป้าหมาย",
+      "targetGoal": "ค่าเป้าหมาย",
+      "xAxisMax": "ค่าสูงสุดแกน X",
+      "leaveEmptyAuto": "เว้นว่างไว้สำหรับค่าอัตโนมัติ",
+      "auto": "อัตโนมัติ",
+      "bgThresholdZones": "โซนพื้นหลัง",
+      "newZone": "โซนใหม่",
+      "noZones": "ยังไม่ได้เพิ่มโซน พื้นหลังจะว่างเปล่า",
+      "echartsWarning": "* ECharts จะซ้อนทับโดยอัตโนมัติ ตรวจสอบให้แน่ใจว่าค่าที่มากกว่าทำหน้าที่เป็นพื้นหลังสำหรับค่าที่น้อยกว่า",
+      "defaults": {
+        "excellent": "ดีเยี่ยม",
+        "poor": "แย่"
+      }
+    }
+  },
+  "digitalGauge": {
+    "newGauge": "เกจตัวเลขใหม่",
+    "config": {
+      "ringColorSettings": "การตั้งค่าสีวงแหวน",
+      "enableDynamicZones": "เปิดใช้งานโซนสีแบบไดนามิก",
+      "defaultRingColor": "สีวงแหวนเริ่มต้น",
+      "dynamicColorZones": "โซนสีแบบไดนามิก",
+      "noZones": "ยังไม่ได้ตั้งค่าโซนสี",
+      "zoneName": "ชื่อโซน",
+      "newZone": "โซนใหม่",
+      "defaults": {
+        "low": "ต่ำ",
+        "medium": "ปานกลาง",
+        "high": "สูง"
+      }
+    }
+  },
+  "inputAction": {
+    "newAction": "การกระทำใหม่",
+    "noDevicePreset": "ไม่ได้เลือกอุปกรณ์สำหรับคำสั่งระบบ",
+    "execute": "ดำเนินการ",
+    "presets": {
+      "defaultCommand": "ส่งคำสั่งมาตรฐาน"
+    },
+    "messages": {
+      "commandSent": "ส่งคำสั่งไปยังอุปกรณ์ {count} เครื่องแล้ว",
+      "commandFailed": "ไม่สามารถส่งคำสั่งไปยังอุปกรณ์ได้",
+      "noCustomUrl": "ข้อผิดพลาด: ไม่ได้ระบุ URL กำหนดเอง",
+      "invalidHeaders": "รูปแบบ JSON ใน Headers ไม่ถูกต้อง",
+      "invalidBody": "รูปแบบ JSON ใน Request Body ไม่ถูกต้อง",
+      "webhookSuccess": "เรียกใช้ Webhook กำหนดเองสำเร็จ!",
+      "requestFailed": "คำขอทดสอบล้มเหลว: {error}"
+    },
+    "config": {
+      "actionMode": "โหมดการทำงาน",
+      "systemPreset": "คำสั่งระบบ (Internal API)",
+      "customWebhook": "URL ภายนอกกำหนดเอง (Webhook)",
+      "presetConfig": "การตั้งค่าคำสั่งระบบ",
+      "selectPreset": "เลือกรูปแบบคำสั่ง",
+      "commandKey": "คีย์คำสั่ง",
+      "sentToBackend": "ส่งไปยังระบบหลังบ้าน",
+      "commandKeyPlaceholder": "เช่น REBOOT, PUMP_CTRL",
+      "customApiConfig": "การตั้งค่า API กำหนดเอง",
+      "method": "เมธอด (Method)",
+      "endpointUrl": "URL ปลายทาง",
+      "headersJson": "ส่วนหัว (Headers - JSON)",
+      "bodyJson": "เนื้อหาคำขอ (Request Body - JSON)",
+      "buttonAppearance": "ลักษณะปุ่ม",
+      "buttonLabel": "ข้อความบนปุ่ม",
+      "buttonLabelPlaceholder": "เช่น เริ่มมอเตอร์",
+      "buttonIcon": "ไอคอนปุ่ม",
+      "icons": {
+        "zap": "สายฟ้า / ดำเนินการ",
+        "power": "ปุ่มเปิดปิด",
+        "refresh": "รีเฟรช / รีบูต",
+        "play": "เล่น / เริ่ม",
+        "stop": "หยุด",
+        "check": "ตรวจสอบ / ยืนยัน",
+        "globe": "ลูกโลก / Webhook"
+      }
+    }
+  },
+  "lineChart": {
+    "newChart": "กราฟเส้นใหม่",
+    "total": "รวม",
+    "config": {
+      "dataOptions": "ตัวเลือกข้อมูล",
+      "lineStyleLayout": "สไตล์เส้นและการจัดวาง",
+      "fillArea": "เติมสีใต้เส้นกราฟ",
+      "stackLines": "ซ้อนเส้นกราฟ (รวมค่า)",
+      "yAxisLabel": "ป้ายกำกับหน่วยแกน Y",
+      "yAxisPlaceholder": "เช่น MB/s"
+    },
+    "messages": {
+      "fetchHistoryFailed": "ไม่สามารถดึงข้อมูลกราฟย้อนหลังได้"
+    }
+  },
+  "pieChart": {
+    "newChart": "กราฟวงกลมใหม่",
+    "config": {
+      "innerRadius": "รัศมีด้านใน",
+      "outerRadius": "รัศมีด้านนอก",
+      "showLegend": "แสดงคำอธิบายสัญลักษณ์ (Legend)"
+    }
+  },
+  "rowChart": {
+    "newChart": "กราฟแท่งแนวนอนใหม่",
+    "config": {
+      "xAxisLabel": "ป้ายกำกับหน่วยแกน X",
+      "xAxisPlaceholder": "เช่น MB/s, °C"
+    }
+  },
+  "scoreCard": {
+    "newCard": "สกอร์การ์ดใหม่",
+    "devicePrefix": "อุปกรณ์",
+    "total": "รวม",
+    "average": "เฉลี่ย",
+    "min": "ต่ำสุด",
+    "max": "สูงสุด",
+    "of": "จาก",
+    "devs": "เครื่อง",
+    "live": "(สด)",
+    "config": {
+      "layoutVisuals": "เค้าโครงและภาพแสดง",
+      "leftVisual": "ภาพแสดงด้านซ้าย",
+      "visuals": {
+        "line": "กราฟเส้นขนาดเล็ก (Line Sparkline)",
+        "bar": "กราฟแท่งขนาดเล็ก (Bar Sparkline)",
+        "icon": "ไอคอน",
+        "none": "ไม่มี (แสดงเฉพาะค่า)"
+      },
+      "selectIcon": "เลือกไอคอน",
+      "icons": {
+        "activity": "กิจกรรม / ชีพจร",
+        "trendingUp": "แนวโน้มขึ้น",
+        "trendingDown": "แนวโน้มลง",
+        "dollar": "สัญลักษณ์ดอลลาร์",
+        "users": "ผู้ใช้งาน / กลุ่ม",
+        "box": "กล่อง / สินค้าคงคลัง",
+        "cpu": "CPU / อุปกรณ์",
+        "zap": "สายฟ้า / พลังงาน",
+        "thermo": "เทอร์โมมิเตอร์",
+        "droplets": "หยดน้ำ / ของเหลว"
+      },
+      "customSubtext": "ข้อความรองกำหนดเอง",
+      "customSubtextHint": "ใช้แทนข้อความที่สร้างอัตโนมัติ",
+      "customSubtextPlaceholder": "เช่น ยอดไฟรวม, อุณหภูมิเฉลี่ย",
+      "dataAggregation": "การรวมข้อมูลและโหมด",
+      "calcStrategy": "กลยุทธ์การคำนวณ",
+      "liveGroup": "ข้อมูลสด (เรียลไทม์)",
+      "liveModes": {
+        "single": "อุปกรณ์เดียว (ตัวแรกที่เลือก)",
+        "sum": "ผลรวมของอุปกรณ์ที่เลือกทั้งหมด",
+        "avg": "ค่าเฉลี่ยของอุปกรณ์ที่เลือกทั้งหมด",
+        "count": "จำนวนอุปกรณ์เป้าหมาย"
+      },
+      "historyGroup": "ข้อมูลย้อนหลัง",
+      "historyModes": {
+        "avg": "ค่าเฉลี่ยตลอดช่วงเวลา",
+        "min": "ค่าต่ำสุดตลอดช่วงเวลา",
+        "max": "ค่าสูงสุดตลอดช่วงเวลา"
+      },
+      "historyRangeSettings": "การตั้งค่าช่วงข้อมูลย้อนหลัง",
+      "valueFormatting": "รูปแบบของค่า",
+      "decimalHint": "ระบุ 0 สำหรับจำนวนเต็ม"
+    }
+  },
+  "scatterChart": {
+    "newChart": "กราฟจุดใหม่",
+    "trend": "แนวโน้ม",
+    "value": "ค่า",
+    "config": {
+      "regressionAnalysis": "การวิเคราะห์แนวโน้ม (Regression)",
+      "showRegression": "แสดงเส้นแนวโน้ม Linear Regression",
+      "xAxisLabel": "ป้ายกำกับแกน X",
+      "yAxisLabel": "ป้ายกำกับแกน Y",
+      "timePlaceholder": "เช่น เวลา",
+      "valuePlaceholder": "เช่น ค่า"
+    }
+  },
+  "statusWidget": {
+    "newStatus": "สถานะใหม่",
+    "config": {
+      "defaultValueColor": "สีหลักของค่าเริ่มต้น",
+      "textFormatting": "การจัดรูปแบบข้อความและค่า",
+      "conditionalDisplay": "การแสดงสถานะตามเงื่อนไข",
+      "addCondition": "+ เพิ่มเงื่อนไข",
+      "ifValue": "ถ้าค่า",
+      "statusMet": "ตรงตามเงื่อนไข",
+      "textToDisplay": "ข้อความที่ต้องการแสดง",
+      "textColorIfMet": "สีข้อความเมื่อตรงเงื่อนไข",
+      "noConditions": "ยังไม่มีการตั้งค่าเงื่อนไข จะแสดงผลเป็นค่าดิบตามจริง",
+      "evaluationRule": "* ระบบประเมินเงื่อนไขจากบนลงล่าง และจะใช้กฎข้อแรกที่ตรงเงื่อนไข",
+      "defaults": {
+        "online": "ออนไลน์",
+        "offline": "ออฟไลน์"
+      }
+    }
+  },
+  "tableWidget": {
+    "newTable": "ตารางข้อมูลใหม่",
+    "config": {
+      "denseSpacing": "ระยะห่างแบบกระชับ (กะทัดรัด)",
+      "stripedRows": "แถบสลับสี (ลายทาง)",
+      "showRowCount": "แสดงจำนวนแถวที่ส่วนหัวตาราง",
+      "maxRows": "จำนวนแถวสูงสุดที่แสดง",
+      "showTimeColumn": "แสดงคอลัมน์เวลา",
+      "headerBg": "สีพื้นหลังส่วนหัว",
+      "headerTextColor": "สีข้อความส่วนหัว"
+    }
+  },
+  "textWidget": {
+    "newText": "ข้อความใหม่",
+    "defaultContent": "ดับเบิลคลิกหรือคลิกขวาเพื่อตั้งค่ากล่องข้อความนี้...",
+    "config": {
+      "textEditor": "โปรแกรมแก้ไขข้อความ",
+      "bold": "ตัวหนา",
+      "italic": "ตัวเอียง",
+      "underline": "ขีดเส้นใต้",
+      "bulletList": "รายการแบบจุด",
+      "numberedList": "รายการแบบตัวเลข",
+      "alignLeft": "จัดชิดซ้าย",
+      "alignCenter": "จัดกึ่งกลาง",
+      "alignRight": "จัดชิดขวา",
+      "baseFontSize": "ขนาดตัวอักษรพื้นฐาน",
+      "placeholder": "พิมพ์บันทึกหรือคำแนะนำของคุณที่นี่...",
+      "showHeaderCard": "แสดงส่วนหัวของวิดเจ็ต"
+    }
+  },
+  "visualizationWidget": {
+    "newVisualization": "ภาพแสดงใหม่",
+    "noImageUrl": "ไม่ได้ระบุ URL ของรูปภาพ",
+    "config": {
+      "imageSource": "แหล่งที่มารูปภาพ",
+      "uploadNewImage": "อัปโหลดรูปภาพใหม่",
+      "orPasteUrl": "หรือวาง URL",
+      "imageUrlLabel": "URL รูปภาพ / แผนผัง",
+      "imageFit": "การจัดวางรูปภาพ",
+      "fitContain": "พอดี (แสดงภาพเต็มพอดีกรอบ)",
+      "fitCover": "ครอบคลุม (เติมเต็มกรอบและตัดขอบ)",
+      "fitFill": "เติมเต็ม (ยืดให้พอดีกรอบ)",
+      "showTopHeader": "แสดงแถบส่วนหัวด้านบน",
+      "liveDataOverlay": "ข้อมูลสดแบบซ้อนทับ",
+      "overlayPosition": "ตำแหน่งซ้อนทับ",
+      "positions": {
+        "bottomRight": "ล่างขวา",
+        "bottomLeft": "ล่างซ้าย",
+        "topRight": "บนขวา",
+        "topLeft": "บนซ้าย"
+      },
+      "bgColor": "สีพื้นหลัง",
+      "noDevicesWarning": "คำเตือน: คุณต้องเลือกอุปกรณ์อย่างน้อยหนึ่งเครื่องในการตั้งค่าทั่วไปเพื่อดูข้อมูลซ้อนทับ!"
+    },
+    "messages": {
+      "uploadFailed": "การอัปโหลดรูปภาพล้มเหลว",
+      "fileTooLarge": "ไฟล์มีขนาดใหญ่เกิน 10 MB.",
+      "fileNotAllowed": "ได้แค่ไฟล์ (PNG, JPG, GIF, WEBP) ถึงอัพโหลดได้"
+    }
+  }
+}

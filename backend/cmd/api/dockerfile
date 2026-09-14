@@ -1,0 +1,31 @@
+# Stage 1: Build the Go binary
+FROM golang:1.27-alpine3.24 AS builder
+WORKDIR /app
+
+# 1. Copy dependencies (This looks at backend/go.mod)
+COPY go.mod go.sum ./ 
+RUN go mod download
+
+# 2. Copy the rest of the backend source code
+COPY . .
+
+# 3. Build the specific server binary
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o server-api ./cmd/api
+
+# Stage 2: Create the minimal production image
+FROM alpine:3.24
+WORKDIR /app
+
+ARG SERVER_PORT
+
+# Install ca-certificates and tzdata
+RUN apk --no-cache add ca-certificates tzdata
+
+RUN adduser -D nonrootuser
+USER nonrootuser
+
+# 4. Copy from builder
+COPY --from=builder /app/server-api .
+
+EXPOSE ${SERVER_PORT}
+CMD ["./server-api"]

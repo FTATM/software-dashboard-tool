@@ -1,0 +1,102 @@
+package router
+
+import "net/http"
+
+func SetupApi(handlers RouterHandlers) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	widgetMux := http.NewServeMux()
+	mux.Handle("/widget/", http.StripPrefix("/widget", widgetMux))
+	widgetMux.HandleFunc("GET /getbyid/{id}", handlers.Widget.GetById)
+	widgetMux.HandleFunc("POST /upsert", handlers.Widget.Upsert)
+
+	widgetTypeMux := http.NewServeMux()
+	mux.Handle("/widgettype/", http.StripPrefix("/widgettype", widgetTypeMux))
+	widgetTypeMux.HandleFunc("GET /getbyid", handlers.WidgetType.GetById)
+	widgetTypeMux.HandleFunc("GET /getall", handlers.WidgetType.GetAll)
+
+	canvasMux := http.NewServeMux()
+	mux.Handle("/canvas/", http.StripPrefix("/canvas", canvasMux))
+	canvasMux.HandleFunc("GET /getall", handlers.Canvas.GetAll)
+	canvasMux.HandleFunc("GET /getdetailbyid/{id}", handlers.Canvas.GetDetailById)
+	canvasMux.HandleFunc("GET /getalldetailbyuser", handlers.Canvas.GetAllDetailByUser)
+	canvasMux.HandleFunc("GET /getallcanvasroledetail", handlers.Canvas.GetAllCanvasRoleDetail)
+	canvasMux.HandleFunc("POST /upsertcanvasrole", handlers.Canvas.UpsertCanvasRole)
+	canvasMux.HandleFunc("POST /create", handlers.Canvas.Create)
+	canvasMux.HandleFunc("PUT /update", handlers.Canvas.Update)
+	canvasMux.HandleFunc("DELETE /delete/{id}", handlers.Canvas.Delete)
+	canvasMux.HandleFunc("POST /data/query", handlers.Canvas.HandleRawQuery)
+
+	userMux := http.NewServeMux()
+	mux.Handle("/user/", http.StripPrefix("/user", userMux))
+	userMux.HandleFunc("POST /create", handlers.User.Create)
+	userMux.HandleFunc("PUT /update", handlers.User.Update)
+	userMux.HandleFunc("DELETE /delete/{id}", handlers.User.Delete)
+	userMux.HandleFunc("POST /login", handlers.User.Login)
+	userMux.HandleFunc("POST /logout", handlers.User.Logout)
+	userMux.HandleFunc("GET /getalldetail", handlers.User.GetAllDetail)
+	userMux.HandleFunc("GET /permission", handlers.User.Permission)
+
+	deviceMux := http.NewServeMux()
+	mux.Handle("/device/", http.StripPrefix("/device", deviceMux))
+	deviceMux.HandleFunc("GET /getalldetail", handlers.Device.GetAllDetail)
+	deviceMux.HandleFunc("POST /create", handlers.Device.Create)
+	deviceMux.HandleFunc("PUT /update", handlers.Device.Update)
+	deviceMux.HandleFunc("DELETE /delete/{id}", handlers.Device.Delete)
+	deviceMux.HandleFunc("GET /getprotocoltype", handlers.Device.GetProtocolType)
+	deviceMux.HandleFunc("GET /chartstream", handlers.Device.ChartStream)
+	deviceMux.HandleFunc("GET /getalldevicename", handlers.Device.GetAllDeviceName)
+	deviceMux.HandleFunc("GET /charthistory", handlers.Device.ChartHistory)
+	deviceMux.HandleFunc("POST /import/validate", handlers.Device.ValidateImport)
+	deviceMux.HandleFunc("GET /export/devices", handlers.Device.ExportDevices)
+	deviceMux.HandleFunc("GET /pingdevice", handlers.Device.PingDevice)
+	deviceMux.HandleFunc("GET /group/getalldetail", handlers.Device.GetAllGroupDetail)
+	deviceMux.HandleFunc("POST /group/create", handlers.Device.CreateGroup)
+	deviceMux.HandleFunc("PUT /group/update", handlers.Device.UpdateGroup)
+	deviceMux.HandleFunc("DELETE /group/delete/{id}", handlers.Device.DeleteGroup)
+	deviceMux.HandleFunc("POST /triggercommand", handlers.Device.TriggerCommand)
+
+	scheduleMux := http.NewServeMux()
+	mux.Handle("/schedule/", http.StripPrefix("/schedule", scheduleMux))
+	scheduleMux.HandleFunc("GET /getalldetail", handlers.Schedule.GetAllDetail)
+	scheduleMux.HandleFunc("POST /create", handlers.Schedule.Create)
+	scheduleMux.HandleFunc("PUT /update", handlers.Schedule.Update)
+	scheduleMux.HandleFunc("DELETE /delete/{id}", handlers.Schedule.Delete)
+
+	roleMux := http.NewServeMux()
+	mux.Handle("/role/", http.StripPrefix("/role", roleMux))
+	roleMux.HandleFunc("GET /getall", handlers.Role.GetAll)
+	roleMux.HandleFunc("GET /getmenuavailable", handlers.Role.GetMenuAvailable)
+	roleMux.HandleFunc("GET /getdetailbyid/{id}", handlers.Role.GetDetailById)
+	roleMux.HandleFunc("POST /upsert", handlers.Role.Upsert)
+	roleMux.HandleFunc("DELETE /delete/{id}", handlers.Role.Delete)
+
+	logReport := http.NewServeMux()
+	mux.Handle("/logreport/", http.StripPrefix("/logreport", logReport))
+	logReport.HandleFunc("GET /export/logs", handlers.LogReport.ExportLogs)
+	logReport.HandleFunc("GET /searchlogs", handlers.LogReport.SearchLogs)
+	logReport.HandleFunc("GET /getentitytypes", handlers.LogReport.GetEntityTypes)
+	logReport.HandleFunc("GET /getmenutypes", handlers.LogReport.GetMenuTypes)
+
+	notification := http.NewServeMux()
+	mux.Handle("/notification/", http.StripPrefix("/notification", notification))
+	notification.HandleFunc("GET /user/getalldetail", handlers.Notification.GetUserNotifAllDetail)
+	notification.HandleFunc("PUT /user/upsert", handlers.Notification.UpsertUserNotif)
+	notification.HandleFunc("GET /devicerule/getalldetail", handlers.Notification.GetDeviceRuleAllDetail)
+	notification.HandleFunc("POST /devicerule/create", handlers.Notification.CreateDeviceRule)
+	notification.HandleFunc("PUT /devicerule/update", handlers.Notification.UpdateDeviceRule)
+	notification.HandleFunc("DELETE /devicerule/delete/{id}", handlers.Notification.DeleteDeviceRule)
+
+	s3File := http.NewServeMux()
+	mux.Handle("/file/", http.StripPrefix("/file", s3File))
+	s3File.HandleFunc("POST /image/upload", handlers.S3File.UploadImageHandler)
+	s3File.HandleFunc("GET /image/{filename}", handlers.S3File.GetImageHandler)
+
+	return mux
+}
