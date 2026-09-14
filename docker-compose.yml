@@ -151,7 +151,7 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./database/preload.sql:/docker-entrypoint-initdb.d/preload.sql
       # Persist database data even if the container stops
-      - iotmonitor_postgres_data:/var/lib/postgresql
+      - sdt_postgres_data:/var/lib/postgresql
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
@@ -165,7 +165,7 @@ services:
         max-file: "3"
 
 volumes:
-  iotmonitor_postgres_data:
+  sdt_postgres_data:
   mosquitto_data:
   nodered_data:
   garage_data:

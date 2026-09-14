@@ -16,19 +16,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: iot-server-api
+          - name: server-api
             context: ./backend
             dockerfile: ./backend/cmd/api/Dockerfile
             build_args: SERVER_PORT=8080
-          - name: iot-server-schedule-engine
+          - name: server-schedule-engine
             context: ./backend
             dockerfile: ./backend/cmd/schedule_engine/Dockerfile
             build_args: SERVER_PORT=8081
-          - name: iot-server-device-gateway
+          - name: server-device-gateway
             context: ./backend
             dockerfile: ./backend/cmd/device_gateway/Dockerfile
             build_args: SERVER_PORT=8090
-          - name: iot-frontend
+          - name: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
             build_args: ""
