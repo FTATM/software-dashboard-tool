@@ -29,3 +29,15 @@ func GetEnvIntOrDefault(key string, fallback int) int {
 	}
 	return val
 }
+
+func GetEnvBoolOrDefault(key string, fallback bool) bool {
+	valStr := os.Getenv(key)
+	if valStr == "" {
+		return fallback
+	}
+	val, err := strconv.ParseBool(valStr)
+	if err != nil {
+		return fallback
+	}
+	return val
+}

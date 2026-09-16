@@ -24,6 +24,7 @@ type DeviceHandler struct {
 	roleService         model.RoleService
 	deviceGatewayClient model.DeviceGatewayClient
 	notifClient         model.NotificationClient
+	auditLogRepo        model.AuditLogRepository
 }
 
 type ImportRow struct {
@@ -34,8 +35,8 @@ type ImportRow struct {
 	Message    string `json:"message"`
 }
 
-func NewDeviceHandler(service model.DeviceService, rs model.RoleService, deviceGatewayClient model.DeviceGatewayClient, notifClient model.NotificationClient) *DeviceHandler {
-	return &DeviceHandler{service: service, roleService: rs, deviceGatewayClient: deviceGatewayClient}
+func NewDeviceHandler(service model.DeviceService, rs model.RoleService, deviceGatewayClient model.DeviceGatewayClient, notifClient model.NotificationClient, auditLogRepo model.AuditLogRepository) *DeviceHandler {
+	return &DeviceHandler{service: service, roleService: rs, deviceGatewayClient: deviceGatewayClient, auditLogRepo: auditLogRepo}
 }
 
 func (h *DeviceHandler) GetAllDetail(w http.ResponseWriter, r *http.Request) {
@@ -379,6 +380,12 @@ func (h *DeviceHandler) TriggerCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(devices) == 0 {
+		res.Message = "No physical devices found to receive commands (virtual sensors cannot accept hardware commands)"
+		respondJson(w, http.StatusBadRequest, &res)
+		return
+	}
+
 	// 5. Bundle devices by GroupId (for Gateway) and isolate single devices
 	finalCommands := model.BuildGatewayCommands(devices, actionPayload, req.IsGroup)
 
@@ -391,6 +398,25 @@ func (h *DeviceHandler) TriggerCommand(w http.ResponseWriter, r *http.Request) {
 			respondJson(w, http.StatusServiceUnavailable, &res)
 			return
 		}
+	}
+
+	newData, err := model.StructToDynamicJSON(finalCommands)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "Failed to new data audit log trigger command", slog.String("error", err.Error()))
+	}
+
+	audit := model.AuditLog{
+		EntityType: "device",
+		EntityId:   strconv.Itoa(0),
+		MenuType:   "Device Action",
+		Action:     model.QueryAction,
+		ChangedBy:  authUserId,
+		OldData:    nil,
+		NewData:    newData,
+	}
+
+	if err = h.auditLogRepo.Create(r.Context(), []model.AuditLog{audit}); err != nil {
+		slog.ErrorContext(r.Context(), "Failed to create audit log trigger command", slog.String("error", err.Error()))
 	}
 
 	res.Message = "Commands executed successfully"

@@ -117,6 +117,8 @@ func InitializeApi(ctx context.Context) (App, error) {
 		ImageBucket: os.Getenv("S3_IMAGE_BUCKET"),
 	}
 
+	httpsConfig := GetEnvBoolOrDefault("HTTPS", false)
+
 	// Dependency Injection
 	//? DB
 	txManager := repo.NewTxManager(db)
@@ -170,8 +172,8 @@ func InitializeApi(ctx context.Context) (App, error) {
 		Widget:       handler.NewWidgetHandler(widgetService, roleService),
 		Canvas:       handler.NewCanvasHandler(canvasService, roleService),
 		WidgetType:   handler.NewWidgetTypeHandler(widgetTypeService),
-		User:         handler.NewUserHandler(userService, roleService),
-		Device:       handler.NewDeviceHandler(deviceService, roleService, deviceGatewayClient, notificationClient),
+		User:         handler.NewUserHandler(userService, roleService, httpsConfig),
+		Device:       handler.NewDeviceHandler(deviceService, roleService, deviceGatewayClient, notificationClient, auditLogRepo),
 		Role:         handler.NewRoleHandler(roleService),
 		Schedule:     handler.NewScheduleHandler(scheduleService, roleService, scheduleClient),
 		LogReport:    handler.NewLogReportHandler(logReportService),

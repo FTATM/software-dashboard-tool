@@ -18,19 +18,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: server-api
+          - name: sdt-server-api
             context: ./backend
             dockerfile: ./backend/cmd/api/Dockerfile
             port_arg: SERVER_PORT=8080
-          - name: server-schedule-engine
+          - name: sdt-server-schedule-engine
             context: ./backend
             dockerfile: ./backend/cmd/schedule_engine/Dockerfile
             port_arg: SERVER_PORT=8081
-          - name: server-device-gateway
+          - name: sdt-server-device-gateway
             context: ./backend
             dockerfile: ./backend/cmd/device_gateway/Dockerfile
             port_arg: SERVER_PORT=8090
-          - name: frontend
+          - name: sdt-frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
             port_arg: ""

@@ -129,6 +129,10 @@ const handleLogin = async () => {
     return
   }
 
+  if (userLogin.value.data.token) {
+    localStorage.setItem('token', userLogin.value.data.token);
+  }
+
   setUser(
     {
       id: userLogin.value.data.userId,

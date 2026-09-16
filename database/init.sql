@@ -138,10 +138,26 @@ CREATE TABLE IF NOT EXISTS device (
     active BOOL NOT NULL DEFAULT FALSE,
     last_seen_at TIMESTAMPTZ,
     last_alert_triggered_at TIMESTAMPTZ,
-    CONSTRAINT pk_device_id PRIMARY KEY (device_id)
+
+    -- EU & Virtual Sensor Reference
+    ref_device_id INT,
+    raw_min DOUBLE PRECISION,
+    raw_max DOUBLE PRECISION,
+    eu_min DOUBLE PRECISION,
+    eu_max DOUBLE PRECISION,
+
+    CONSTRAINT pk_device_id PRIMARY KEY (device_id),
+    CONSTRAINT fk_device_ref FOREIGN KEY (ref_device_id) 
+        REFERENCES device (device_id) ON DELETE SET NULL,
+    CONSTRAINT chk_no_self_ref CHECK (ref_device_id IS NULL OR ref_device_id <> device_id)
 ) WITH (fillfactor = 70);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_device_name_active ON device (device_name) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_device_name_active 
+ON device (device_name) WHERE deleted_at IS NULL;
+
+-- Index the reference column for fast lookup
+CREATE INDEX IF NOT EXISTS idx_device_ref_id ON device (ref_device_id) 
+WHERE ref_device_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS device_group_map (
     group_id INT NOT NULL,

@@ -66,6 +66,7 @@ func main() {
 
 func initLogger() io.Closer {
 	logDir := app.GetEnvOrDefault("LOG_DEVICE_GATEWAY_DIR", "log/devicegateway")
+	slog.Info("logDir", slog.String("path", logDir))
 
 	logMaxSize := app.GetEnvIntOrDefault("LOG_DEVICE_GATEWAY_MAX_SIZE", 10)
 	logMaxBackup := app.GetEnvIntOrDefault("LOG_DEVICE_GATEWAY_MAX_BACKUP", 5)

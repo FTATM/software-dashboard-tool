@@ -172,7 +172,7 @@
               </div>
 
               <template v-if="form.targetType === 'device'">
-                <SearchableDropdown v-model="form.deviceId" :options="devices" label-key="deviceName"
+                <SearchableDropdown v-model="form.deviceId" :options="realDevices" label-key="deviceName"
                   value-key="deviceId" :placeholder="$t('common.searchDevice')" />
                 <div class="label px-1 py-0 h-5">
                   <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium">{{
@@ -596,6 +596,10 @@ const dateFnsLocale = computed(() => {
   return resolveLocale(isThai ? thLocale : enLocale);
 });
 
+const realDevices = computed(() => {
+  return devices.value.filter(d => !d.refDeviceId);
+});
+
 // --- Custom Cron Generators ---
 const updateCustomCronString = () => {
   const mins = customTime.value.minutes;
@@ -671,21 +675,29 @@ const activeGroupDevices = computed(() => {
   if (form.value.targetType !== 'group' || !form.value.deviceGroupId) return [];
   const group = groups.value.find(g => g.groupId === form.value.deviceGroupId);
 
-  if (group && group.devices) return group.devices;
-  if (group && group.deviceIds) return group.deviceIds.map(id => devices.value.find(d => d.deviceId === id)).filter(Boolean);
+  let groupDevs = [];
+  if (group && group.devices) {
+    groupDevs = group.devices;
+  } else if (group && group.deviceIds) {
+    groupDevs = group.deviceIds
+      .map(id => devices.value.find(d => d.deviceId === id))
+      .filter(Boolean);
+  } else {
+    groupDevs = devices.value.filter(d => d.deviceGroupId === form.value.deviceGroupId);
+  }
 
-  return devices.value.filter(d => d.deviceGroupId === form.value.deviceGroupId);
+  // ⚡ Exclude virtual devices from the command override list
+  return groupDevs.filter(d => !d.refDeviceId);
 });
 
 const hasNoProtocol = (row) => {
-  // Check if the target is a single device
   if (row.deviceId) {
     const device = devicesData.value?.data?.find(d => d.deviceId === row.deviceId);
-    if (device && (!device.protocol || device.protocol === 'none')) {
-      return true; // Missing protocol found
+    // ⚡ Flag warning if device has no protocol OR is a virtual sensor
+    if (device && (!device.protocol || device.protocol === 'none' || device.refDeviceId)) {
+      return true;
     }
   }
-  // If everything is valid, return false (so it displays the normal status)
   return false;
 };
 

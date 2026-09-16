@@ -67,6 +67,7 @@ func main() {
 
 func initLogger() io.Closer {
 	logDir := app.GetEnvOrDefault("LOG_API_DIR", "log/api")
+	slog.Info("logDir", slog.String("path", logDir))
 
 	logMaxSize := app.GetEnvIntOrDefault("LOG_API_MAX_SIZE", 10)
 	logMaxBackup := app.GetEnvIntOrDefault("LOG_API_MAX_BACKUP", 5)

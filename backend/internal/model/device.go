@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"math"
 	"time"
 )
 
@@ -19,6 +20,12 @@ type Device struct {
 	Active               bool       `json:"active" db:"active"`
 	LastSeenAt           *time.Time `json:"lastSeenAt,omitempty" db:"last_seen_at"`
 	LastAlertTriggeredAt *time.Time `json:"-" db:"last_alert_triggered_at"`
+
+	RefDeviceId *int     `json:"refDeviceId,omitempty" db:"ref_device_id"`
+	RawMin      *float64 `json:"rawMin,omitempty" db:"raw_min"`
+	RawMax      *float64 `json:"rawMax,omitempty" db:"raw_max"`
+	EuMin       *float64 `json:"euMin,omitempty" db:"eu_min"`
+	EuMax       *float64 `json:"euMax,omitempty" db:"eu_max"`
 }
 
 func (s *Device) IsSame(req Device) bool {
@@ -29,36 +36,80 @@ func (s *Device) IsSame(req Device) bool {
 	return s.DeviceId == req.DeviceId &&
 		s.DeviceName == req.DeviceName &&
 		s.Active == req.Active &&
-		s.Protocol == req.Protocol
+		ptrEqual(s.Protocol, req.Protocol) &&
+		ptrEqual(s.RefDeviceId, req.RefDeviceId) &&
+		ptrEqual(s.RawMin, req.RawMin) &&
+		ptrEqual(s.RawMax, req.RawMax) &&
+		ptrEqual(s.EuMin, req.EuMin) &&
+		ptrEqual(s.EuMax, req.EuMax)
+}
+
+func ptrEqual[T comparable](a, b *T) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func Remap(value float64, rawMin, rawMax, euMin, euMax *float64) float64 {
+	if rawMin == nil || rawMax == nil || euMin == nil || euMax == nil || *rawMax == *rawMin {
+		return value
+	}
+	// Clamp raw value to configured boundaries
+	clamped := math.Max(*rawMin, math.Min(*rawMax, value))
+	ratio := (clamped - *rawMin) / (*rawMax - *rawMin)
+	return *euMin + ratio*(*euMax-*euMin)
 }
 
 type DeviceDetail struct {
-	DeviceId   int        `json:"deviceId"`
-	DeviceName string     `json:"deviceName"`
-	Protocol   *string    `json:"protocol,omitempty" db:"protocol"`
-	ValueData  int        `json:"valueData,omitempty"`
-	Active     bool       `json:"active,omitempty"`
-	LastSeenAt *time.Time `json:"lastSeenAt,omitempty"`
+	DeviceId    int        `json:"deviceId"`
+	DeviceName  string     `json:"deviceName"`
+	Protocol    *string    `json:"protocol,omitempty" db:"protocol"`
+	ValueData   int        `json:"valueData,omitempty"`
+	Active      bool       `json:"active,omitempty"`
+	LastSeenAt  *time.Time `json:"lastSeenAt,omitempty"`
+	RefDeviceId *int       `json:"refDeviceId,omitempty"`
+	RawMin      *float64   `json:"rawMin,omitempty"`
+	RawMax      *float64   `json:"rawMax,omitempty"`
+	EuMin       *float64   `json:"euMin,omitempty"`
+	EuMax       *float64   `json:"euMax,omitempty"`
 }
 
 type DeviceCreate struct {
-	DeviceName string  `json:"deviceName"`
-	Protocol   *string `json:"protocol"`
-	Active     bool    `json:"active"`
+	DeviceName  string   `json:"deviceName"`
+	Protocol    *string  `json:"protocol"`
+	Active      bool     `json:"active"`
+	RefDeviceId *int     `json:"refDeviceId"`
+	RawMin      *float64 `json:"rawMin"`
+	RawMax      *float64 `json:"rawMax"`
+	EuMin       *float64 `json:"euMin"`
+	EuMax       *float64 `json:"euMax"`
 }
 
 type DeviceUpdate struct {
-	DeviceId   int     `json:"deviceId"`
-	DeviceName string  `json:"deviceName"`
-	Protocol   *string `json:"protocol"`
-	Active     bool    `json:"active"`
-	OldName    string  `json:"-"`
+	DeviceId    int      `json:"deviceId"`
+	DeviceName  string   `json:"deviceName"`
+	Protocol    *string  `json:"protocol"`
+	Active      bool     `json:"active"`
+	OldName     string   `json:"-"`
+	RefDeviceId *int     `json:"refDeviceId"`
+	RawMin      *float64 `json:"rawMin"`
+	RawMax      *float64 `json:"rawMax"`
+	EuMin       *float64 `json:"euMin"`
+	EuMax       *float64 `json:"euMax"`
 }
 
 type ChartDeviceData struct {
 	DeviceName     string     `json:"deviceName"`
 	ValueData      float64    `json:"valueData"`
 	UpdatedValueAt *time.Time `json:"updatedValueAt"`
+	RawMin         *float64   `json:"-" db:"raw_min"`
+	RawMax         *float64   `json:"-" db:"raw_max"`
+	EuMin          *float64   `json:"-" db:"eu_min"`
+	EuMax          *float64   `json:"-" db:"eu_max"`
 }
 
 type ChartData struct {

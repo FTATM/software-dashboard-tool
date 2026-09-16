@@ -151,7 +151,15 @@ const activeDevices = computed(() => {
   if (!props.selectedDeviceIds) return [];
   return props.selectedDeviceIds
     .map(id => props.allDevices.find(device => device.deviceId === id))
-    .filter(Boolean);
+    .filter(device => device && !device.refDeviceId);
+});
+
+const hasVirtualExcluded = computed(() => {
+  if (!props.selectedDeviceIds) return false;
+  return props.selectedDeviceIds.some(id => {
+    const d = props.allDevices.find(device => device.deviceId === id);
+    return d && !!d.refDeviceId;
+  });
 });
 
 const localConfig = ref({
@@ -176,13 +184,14 @@ const handleOverrideToggle = () => {
   }
 };
 
-watch(() => props.selectedDeviceIds, (newIds) => {
+watch(() => props.selectedDeviceIds, () => {
   if (!localConfig.value.enableOverrides) return;
 
   const cleanOverrides = {};
-  newIds.forEach(id => {
-    if (localConfig.value.deviceOverrides[id]) {
-      cleanOverrides[id] = localConfig.value.deviceOverrides[id];
+  // ⚡ Map overrides only for physical devices
+  activeDevices.value.forEach(d => {
+    if (localConfig.value.deviceOverrides[d.deviceId]) {
+      cleanOverrides[d.deviceId] = localConfig.value.deviceOverrides[d.deviceId];
     }
   });
   localConfig.value.deviceOverrides = cleanOverrides;

@@ -42,12 +42,17 @@ func (s *deviceService) GetAllDeviceDetail(ctx context.Context) ([]model.DeviceD
 
 	for _, d := range devices {
 		detail := model.DeviceDetail{
-			DeviceId:   d.DeviceId,
-			DeviceName: d.DeviceName,
-			Protocol:   d.Protocol,
-			ValueData:  d.ValueData,
-			Active:     d.Active,
-			LastSeenAt: d.LastSeenAt,
+			DeviceId:    d.DeviceId,
+			DeviceName:  d.DeviceName,
+			Protocol:    d.Protocol,
+			ValueData:   d.ValueData,
+			Active:      d.Active,
+			LastSeenAt:  d.LastSeenAt,
+			RefDeviceId: d.RefDeviceId,
+			RawMin:      d.RawMin,
+			RawMax:      d.RawMax,
+			EuMin:       d.EuMin,
+			EuMax:       d.EuMax,
 		}
 		deviceDetails = append(deviceDetails, detail)
 	}
@@ -65,9 +70,14 @@ func (s *deviceService) CreateDevice(ctx context.Context, createDevice []model.D
 	devices := make([]model.Device, 0, len(createDevice))
 	for _, createReq := range createDevice {
 		device := model.Device{
-			DeviceName: createReq.DeviceName,
-			Protocol:   createReq.Protocol,
-			Active:     createReq.Active,
+			DeviceName:  createReq.DeviceName,
+			Protocol:    createReq.Protocol,
+			Active:      createReq.Active,
+			RefDeviceId: createReq.RefDeviceId,
+			RawMin:      createReq.RawMin,
+			RawMax:      createReq.RawMax,
+			EuMin:       createReq.EuMin,
+			EuMax:       createReq.EuMax,
 		}
 		devices = append(devices, device)
 	}
@@ -118,10 +128,15 @@ func (s *deviceService) UpdateDevice(ctx context.Context, updateDevice *model.De
 	var err error
 
 	device := model.Device{
-		DeviceName: updateDevice.DeviceName,
-		DeviceId:   updateDevice.DeviceId,
-		Active:     updateDevice.Active,
-		Protocol:   updateDevice.Protocol,
+		DeviceName:  updateDevice.DeviceName,
+		DeviceId:    updateDevice.DeviceId,
+		Active:      updateDevice.Active,
+		Protocol:    updateDevice.Protocol,
+		RefDeviceId: updateDevice.RefDeviceId,
+		RawMin:      updateDevice.RawMin,
+		RawMax:      updateDevice.RawMax,
+		EuMin:       updateDevice.EuMin,
+		EuMax:       updateDevice.EuMax,
 	}
 
 	oldDevice, err := s.deviceRepo.GetById(ctx, device.DeviceId)
@@ -318,10 +333,15 @@ func (s *deviceService) StartPublic(ctx context.Context) {
 					continue
 				}
 
-				// ⚡ REVERSE SCALING: Divide by 100.0 to convert the DB integer (e.g., 2456)
-				// back into the real decimal (24.56) for the Vue frontend.
-				chartDeviceData.ValueData = chartDeviceData.ValueData / float64(model.DeviceScale)
-
+				// 1. Unpack DB fixed-point integer (e.g. 50000 -> 50.0)
+				rawDecimal := chartDeviceData.ValueData / float64(model.DeviceScale)
+				chartDeviceData.ValueData = model.Remap(
+					rawDecimal,
+					chartDeviceData.RawMin,
+					chartDeviceData.RawMax,
+					chartDeviceData.EuMin,
+					chartDeviceData.EuMax,
+				)
 				masterDataMap[deviceId] = chartDeviceData
 			}
 
@@ -378,44 +398,75 @@ func (s *deviceService) GetAllDeviceName(ctx context.Context) ([]model.DeviceDet
 
 func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, maxPoints int, fromTime, toTime time.Time) (map[int][][2]float64, error) {
 	const fname = "GetChartHistory"
-	count, err := s.deviceRepo.CountData(ctx, deviceIds, fromTime, toTime)
+
+	// 1. Fetch metadata for requested devices to check for virtual sensors
+	devices, err := s.deviceRepo.GetByIds(ctx, deviceIds, true)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	deviceMeta := make(map[int]model.Device)
+	queryIdsSet := make(map[int]struct{})
+
+	for _, d := range devices {
+		deviceMeta[d.DeviceId] = d
+		if d.RefDeviceId != nil && *d.RefDeviceId > 0 {
+			queryIdsSet[*d.RefDeviceId] = struct{}{} // Fetch parent logs
+		} else {
+			queryIdsSet[d.DeviceId] = struct{}{}
+		}
+	}
+
+	queryIds := make([]int, 0, len(queryIdsSet))
+	for id := range queryIdsSet {
+		queryIds = append(queryIds, id)
+	}
+
+	count, err := s.deviceRepo.CountData(ctx, queryIds, fromTime, toTime)
 	if err != nil {
 		return nil, err
 	}
 
 	var logs []model.DeviceDataLog
-
-	// 2. ⚡ DYNAMIC DECISION LOGIC ⚡
 	if count <= maxPoints {
-		// Scenario A: Safe to send raw data!
-		// The user zoomed in, or the device hasn't sent many points yet.
-		logs, err = s.deviceRepo.GetRawData(ctx, deviceIds, fromTime, toTime, maxPoints)
-		if err != nil {
-			return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
-		}
+		logs, err = s.deviceRepo.GetRawData(ctx, queryIds, fromTime, toTime, maxPoints)
 	} else {
-		// Scenario B: Too much data!
-		// We must aggregate it so we don't crash the frontend.
 		totalDuration := toTime.Sub(fromTime)
-
-		// Calculate the dynamic bucket size
 		bucketDuration := max(totalDuration/time.Duration(maxPoints), time.Second)
 		bucketInterval := fmt.Sprintf("%f seconds", bucketDuration.Seconds())
-
-		logs, err = s.deviceRepo.GetAggregatedData(ctx, deviceIds, fromTime, toTime, bucketInterval)
-		if err != nil {
-			return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
-		}
+		logs, err = s.deviceRepo.GetAggregatedData(ctx, queryIds, fromTime, toTime, bucketInterval)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
-	// 3. Map the chosen data perfectly for ECharts
-	historyData := make(map[int][][2]float64)
-
+	// 2. Group logs by physical ID
+	logsByPhysicalId := make(map[int][]model.DeviceDataLog)
 	for _, log := range logs {
-		tsMillis := float64(log.ReceivedAt.UnixMilli())
-		valData := float64(log.ValueData) / float64(model.DeviceScale)
+		logsByPhysicalId[log.DeviceId] = append(logsByPhysicalId[log.DeviceId], log)
+	}
 
-		historyData[log.DeviceId] = append(historyData[log.DeviceId], [2]float64{tsMillis, valData})
+	// 3. Map logs back to the requested device IDs and apply EU scaling
+	historyData := make(map[int][][2]float64)
+	for _, reqId := range deviceIds {
+		meta, ok := deviceMeta[reqId]
+		if !ok {
+			continue
+		}
+
+		sourceId := reqId
+		if meta.RefDeviceId != nil && *meta.RefDeviceId > 0 {
+			sourceId = *meta.RefDeviceId
+		}
+
+		sourceLogs := logsByPhysicalId[sourceId]
+		for _, log := range sourceLogs {
+			tsMillis := float64(log.ReceivedAt.UnixMilli())
+			rawVal := float64(log.ValueData) / float64(model.DeviceScale)
+			euVal := model.Remap(rawVal, meta.RawMin, meta.RawMax, meta.EuMin, meta.EuMax)
+
+			historyData[reqId] = append(historyData[reqId], [2]float64{tsMillis, euVal})
+		}
 	}
 
 	return historyData, nil

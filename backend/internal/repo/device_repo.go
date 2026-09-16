@@ -31,8 +31,31 @@ func (r *deviceRepo) db(ctx context.Context) DBTX {
 func (r *deviceRepo) GetById(ctx context.Context, id int) (*model.Device, error) {
 	const fname = "GetById"
 	device := &model.Device{}
-	query := "SELECT device_id, device_name, active, protocol FROM device WHERE device_id = $1"
-	err := r.db(ctx).QueryRow(ctx, query, id).Scan(&device.DeviceId, &device.DeviceName, &device.Active, &device.Protocol)
+	query := `
+		SELECT 
+			d.device_id, 
+			d.device_name, 
+			d.active, 
+			d.protocol,
+			d.ref_device_id,
+			d.raw_min,
+			d.raw_max,
+			d.eu_min,
+			d.eu_max
+		FROM device d
+		WHERE d.device_id = $1 AND d.deleted_at IS NULL
+	`
+	err := r.db(ctx).QueryRow(ctx, query, id).Scan(
+		&device.DeviceId,
+		&device.DeviceName,
+		&device.Active,
+		&device.Protocol,
+		&device.RefDeviceId,
+		&device.RawMin,
+		&device.RawMax,
+		&device.EuMin,
+		&device.EuMax,
+	)
 
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
@@ -44,14 +67,20 @@ func (r *deviceRepo) GetAll(ctx context.Context, active bool) ([]model.Device, e
 	const fname = "GetAll"
 	query := `
 	SELECT 
-		device_id, 
-		device_name, 
-		protocol,
-		value_data,
-        active, 
-		last_seen_at 
-    FROM device
-	WHERE ($1 = false) OR ($1 = true AND deleted_at IS NULL)
+		d.device_id, 
+		d.device_name, 
+		d.protocol,
+		COALESCE(ref.value_data, d.value_data) AS value_data,
+		d.active, 
+		COALESCE(ref.last_seen_at, d.last_seen_at) AS last_seen_at,
+		d.ref_device_id,
+		d.raw_min,
+		d.raw_max,
+		d.eu_min,
+		d.eu_max
+	FROM device d
+	LEFT JOIN device ref ON d.ref_device_id = ref.device_id AND ref.deleted_at IS NULL
+	WHERE ($1 = false) OR ($1 = true AND d.deleted_at IS NULL)
 	`
 	rows, err := r.db(ctx).Query(ctx, query, active)
 	if err != nil {
@@ -97,21 +126,18 @@ func (r *deviceRepo) Create(ctx context.Context, devices []model.Device) error {
 
 	batch := &pgx.Batch{}
 	query := `
-        INSERT INTO device (
-			device_name,
-			protocol,
-			active
-        ) 
-        VALUES ($1, $2,$3) 
-        RETURNING device_id
+    	INSERT INTO device (
+        	device_name, protocol, active,
+        	ref_device_id, raw_min, raw_max, eu_min, eu_max
+    	) 
+    	VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+    	RETURNING device_id
 	`
 
 	for _, device := range devices {
-		batch.Queue(
-			query,
-			device.DeviceName,
-			device.Protocol,
-			device.Active,
+		batch.Queue(query,
+			device.DeviceName, device.Protocol, device.Active,
+			device.RefDeviceId, device.RawMin, device.RawMax, device.EuMin, device.EuMax,
 		)
 	}
 
@@ -135,15 +161,20 @@ func (r *deviceRepo) Create(ctx context.Context, devices []model.Device) error {
 func (r *deviceRepo) Update(ctx context.Context, device *model.Device) error {
 	const fname = "Update"
 	query := `
-			UPDATE device
-			SET 
-				active = $1,
-				protocol = $3,
-				device_name = $4,
-				updated_at = now()
-			WHERE device_id = $2
-		`
-	result, err := r.db(ctx).Exec(ctx, query, device.Active, device.DeviceId, device.Protocol, device.DeviceName)
+    	UPDATE device
+    	SET 
+        	active = $1,
+        	protocol = $3,
+        	device_name = $4,
+        	ref_device_id = $5,
+        	raw_min = $6,
+        	raw_max = $7,
+        	eu_min = $8,
+        	eu_max = $9,
+        	updated_at = now()
+    	WHERE device_id = $2
+	`
+	result, err := r.db(ctx).Exec(ctx, query, device.Active, device.DeviceId, device.Protocol, device.DeviceName, device.RefDeviceId, device.RawMin, device.RawMax, device.EuMin, device.EuMax)
 
 	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		if pgErr.Code == "23505" {
@@ -205,9 +236,25 @@ func (r *deviceRepo) GetProtocolType(ctx context.Context) ([]string, error) {
 func (r *deviceRepo) GetByIdChartDeviceData(ctx context.Context, id int) (model.ChartDeviceData, error) {
 	const fname = "GetByIdChartDevice"
 	device := model.ChartDeviceData{}
-	query := "SELECT device_name, value_data, updated_value_at FROM device WHERE device_id = $1"
-	err := r.db(ctx).QueryRow(ctx, query, id).Scan(&device.DeviceName, &device.ValueData, &device.UpdatedValueAt)
-
+	query := `
+		SELECT 
+			d.device_name, 
+			COALESCE(ref.value_data, d.value_data)::float8 AS value_data, 
+			COALESCE(ref.updated_value_at, d.updated_value_at) AS updated_value_at,
+			d.raw_min, d.raw_max, d.eu_min, d.eu_max
+		FROM device d
+		LEFT JOIN device ref ON d.ref_device_id = ref.device_id
+		WHERE d.device_id = $1
+	`
+	err := r.db(ctx).QueryRow(ctx, query, id).Scan(
+		&device.DeviceName,
+		&device.ValueData,
+		&device.UpdatedValueAt,
+		&device.RawMin,
+		&device.RawMax,
+		&device.EuMin,
+		&device.EuMax,
+	)
 	if err != nil {
 		return device, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
@@ -484,14 +531,20 @@ func (r *deviceRepo) GetByIds(ctx context.Context, id []int, active bool) ([]mod
 	const fname = "GetByIds"
 	query := `
 	SELECT 
-		device_id, 
-		device_name, 
-		protocol,
-		value_data,
-        active
-    FROM device
-	WHERE (($1 = false) OR ($1 = true AND deleted_at IS NULL))
-		AND device_id = ANY($2::INT[])
+		d.device_id, 
+		d.device_name, 
+		d.protocol,
+		COALESCE(ref.value_data, d.value_data) AS value_data,
+		d.active,
+		d.ref_device_id,
+		d.raw_min,
+		d.raw_max,
+		d.eu_min,
+		d.eu_max
+	FROM device d
+	LEFT JOIN device ref ON d.ref_device_id = ref.device_id AND ref.deleted_at IS NULL
+	WHERE (($1 = false) OR ($1 = true AND d.deleted_at IS NULL))
+		AND d.device_id = ANY($2::INT[])
 	`
 	rows, err := r.db(ctx).Query(ctx, query, active, id)
 	if err != nil {
@@ -522,7 +575,8 @@ func (r *deviceRepo) GetDeviceForCommandByIds(ctx context.Context, deviceIds []i
 	LEFT JOIN device_group g ON m.group_id = g.group_id
 	WHERE d.device_id = ANY($1::INT[])
 	  AND d.deleted_at IS NULL
-	  AND d.active = true;
+	  AND d.active = true
+	  AND d.ref_device_id IS NULL
 	`
 
 	rows, err := r.db(ctx).Query(ctx, query, deviceIds)
@@ -543,10 +597,12 @@ func (r *deviceRepo) GetDeviceProtocol(ctx context.Context, deviceId int) (*stri
 	const fname = "GetDeviceProtocol"
 	var protocol *string
 	query := `
-	SELECT 
-		protocol
-    FROM device
-	WHERE device_id = $1 AND active = true AND deleted_at IS NULL
+		SELECT protocol
+		FROM device
+		WHERE device_id = $1 
+	  		AND active = true 
+	  		AND deleted_at IS NULL
+	  		AND ref_device_id IS NULL
 	`
 	err := r.db(ctx).QueryRow(ctx, query, deviceId).Scan(&protocol)
 	if err != nil {

@@ -16,9 +16,10 @@ import (
 type UserHandler struct {
 	service     model.UserService
 	roleService model.RoleService
+	httpsConfig bool
 }
 
-func NewUserHandler(service model.UserService, roleService model.RoleService) *UserHandler {
+func NewUserHandler(service model.UserService, roleService model.RoleService, httpsConfig bool) *UserHandler {
 	return &UserHandler{service: service, roleService: roleService}
 }
 
@@ -33,7 +34,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	issueTime := time.Now()
-	expTime := time.Now().Add(24 * time.Minute)
+	expTime := time.Now().Add(24 * time.Hour)
 	clientInfo := auth.GetClientInfo(r)
 	user, tokenString, err := h.service.LoginUserJwt(r.Context(), &creds, issueTime, expTime, clientInfo)
 	if err != nil {
@@ -60,7 +61,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenString,
 		Expires:  expTime,
 		HttpOnly: true,                    // CRITICAL: Prevents JavaScript/XSS from reading the cookie
-		Secure:   true,                    // CRITICAL: Ensures cookie is only sent over HTTPS (set to false ONLY if testing on localhost HTTP)
+		Secure:   h.httpsConfig,           // CRITICAL: Ensures cookie is only sent over HTTPS (set to false ONLY if testing on localhost HTTP)
 		SameSite: http.SameSiteStrictMode, // Protects against Cross-Site Request Forgery (CSRF)
 		Path:     "/",
 	})

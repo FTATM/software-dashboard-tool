@@ -1,3 +1,4 @@
+// fetchAuth.js
 export const fetchWithAuth = async (url, options = {}) => {
   const isFormData = options.body instanceof FormData;
 
@@ -9,14 +10,8 @@ export const fetchWithAuth = async (url, options = {}) => {
   const response = await fetch(url, {
     ...options,
     headers,
-    credentials: 'include'
+    credentials: 'include' // Sends the HttpOnly cookie
   });
-
-  if (response.status === 401) {
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-    throw new Error('Session expired. Please log in again.');
-  }
 
   return response;
 };

@@ -157,6 +157,7 @@ func (r *deviceGatewayRepo) GetDeviceIdByGroupName(ctx context.Context, groupNam
 		LEFT JOIN device d on dgm.device_id = d.device_id 
     		AND d.active = true 
     		AND d.deleted_at IS NULL
+			AND d.ref_device_id IS NULL
 		WHERE 
     		dg.group_name = $1
 		GROUP BY 
@@ -232,7 +233,8 @@ func (r *deviceGatewayRepo) GetDeviceInfoByName(ctx context.Context, deviceName 
 		FROM device
 		WHERE 
 			device_name = $1 AND
-			(active = true AND deleted_at IS NULL)
+			(active = true AND deleted_at IS NULL) AND
+			ref_device_id IS NULL
 	`
 
 	// Scan both the ID and the protocol into their respective variables

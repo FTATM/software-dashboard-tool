@@ -177,24 +177,26 @@ func (s *scheduleEngineService) executeDeviceTask(ctx context.Context, jobID uui
 	changeStatus := func(newStatus string, reason string) {
 		slog.Info(fmt.Sprintf("Changing schedule status to %s: %s", newStatus, reason), slog.String("scheduleId", sched.ScheduleId))
 
-		// A. Clean up the memory engine
+		// Clean up the memory engine
 		s.engine.RemoveJob(jobID)
 		s.jobRegistry.Delete(sched.ScheduleId)
 
-		// B. Update primary database status
+		// Update primary database status
 		s.scheduleEngineRepo.UpdateStatus(ctx, sched.ScheduleId, newStatus)
 		if newStatus == "completed" {
 			s.scheduleEngineRepo.UpdateLastRun(ctx, sched.ScheduleId)
 		}
 
-		// C. Safely generate JSON for the Audit Log
 		oldData, err1 := model.StructToDynamicJSON(map[string]any{"status": sched.Status})
-		newData, err2 := model.StructToDynamicJSON(map[string]any{"status": newStatus})
+		newData, err2 := model.StructToDynamicJSON(map[string]any{
+			"status":     newStatus,
+			"taskAction": sched.TaskAction,
+		})
 		if err1 != nil || err2 != nil {
 			slog.ErrorContext(ctx, "Failed to parse JSON for schedule audit log", slog.String("scheduleId", sched.ScheduleId))
 		}
 
-		// D. Build and save the Audit Log directly
+		// Build and save the Audit Log directly
 		audit := model.AuditLog{
 			EntityType: "schedule",
 			EntityId:   sched.ScheduleId,
@@ -214,7 +216,6 @@ func (s *scheduleEngineService) executeDeviceTask(ctx context.Context, jobID uui
 	if sched.DeviceId != nil && *sched.DeviceId > 0 {
 		protocol, err := s.deviceRepo.GetDeviceProtocol(ctx, *sched.DeviceId)
 		if errors.Is(err, pgx.ErrNoRows) || protocol == nil {
-			// Cancel if a specifically targeted single device has no protocol
 			changeStatus("cancelled", "No protocol found for target device")
 			return
 		} else if err != nil {
@@ -228,19 +229,37 @@ func (s *scheduleEngineService) executeDeviceTask(ctx context.Context, jobID uui
 
 	if sched.ScheduleType == "recurring" && isPastEndTime {
 		changeStatus("completed", "Recurring schedule reached end date")
-
 	} else if sched.ScheduleType == "one_time" {
 		changeStatus("completed", "One-time job finished")
-
 	} else {
 		s.scheduleEngineRepo.UpdateLastRun(ctx, sched.ScheduleId)
+
+		newData, err := model.StructToDynamicJSON(map[string]any{
+			"taskAction": sched.TaskAction,
+		})
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to parse JSON for schedule audit log", slog.String("scheduleId", sched.ScheduleId))
+		}
+		audit := model.AuditLog{
+			EntityType: "schedule",
+			EntityId:   sched.ScheduleId,
+			MenuType:   "Scheduler",
+			Action:     model.QueryAction,
+			ChangedBy:  0, // System execution
+			OldData:    nil,
+			NewData:    newData,
+		}
+
+		if err := s.auditLogRepo.Create(ctx, []model.AuditLog{audit}); err != nil {
+			slog.ErrorContext(ctx, "Failed to insert schedule audit log", slog.String("error", err.Error()))
+		}
 	}
 
-	// 4. Parse the TaskActionPayload
+	// 4. Parse the TaskActionPayload directly from the extracted inner JSON
 	var actionPayload model.TaskActionPayload
 	if len(sched.TaskAction) > 0 {
 		if err := json.Unmarshal(sched.TaskAction, &actionPayload); err != nil {
-			slog.ErrorContext(ctx, "Failed to parse task action", slog.String("error", err.Error()))
+			slog.ErrorContext(ctx, "Failed to parse task action payload", slog.String("scheduleId", sched.ScheduleId), slog.String("error", err.Error()))
 			return
 		}
 	}
@@ -270,6 +289,11 @@ func (s *scheduleEngineService) executeDeviceTask(ctx context.Context, jobID uui
 	devices, err := s.deviceRepo.GetDeviceForCommandByIds(ctx, targetDeviceIds)
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to fetch device info for scheduled command", slog.String("error", err.Error()))
+		return
+	}
+
+	if len(devices) == 0 {
+		slog.WarnContext(ctx, "Schedule targeted a group with no executable physical devices", slog.String("scheduleId", sched.ScheduleId))
 		return
 	}
 

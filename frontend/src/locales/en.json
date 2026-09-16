@@ -16,7 +16,8 @@
     "authenticating": "Authenticating...",
     "footerNote": "Accounts are provisioned by the system administrator.",
     "errorConnection": "Cannot reach the server. Please check your internet connection or try again later.",
-    "invalidLogin": "Invalid username or password."
+    "invalidLogin": "Invalid username or password.",
+    "sessionExpired": "Session expired. Please login again."
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -245,6 +246,26 @@
     "neverConnected": "Never connected",
     "deleteWarning": "Delete the \"{name}\"?",
     "cannotPingNoProtocol": "Cannot test status without a protocol",
+    "enableScaling": "Enable Value Scaling",
+    "enableScalingDesc": "Map raw sensor readings to engineering units (e.g., 0 - 5000 to 0 - 50 or 0 - 1500 RPM)",
+    "refDevice": "Reference Device (Virtual Sensor)",
+    "refDevicePlaceholder": "Select physical source device...",
+    "noRefDevice": "None (Direct / Physical Device)",
+    "virtualDeviceProtocolHint": "Virtual sensors derive telemetry from their reference device and do not require a communication protocol.",
+    "virtualDeviceNoPing": "Virtual sensors cannot be pinged directly",
+    "rawRange": "Raw Input Range",
+    "rawMin": "Raw Min",
+    "rawMax": "Raw Max",
+    "rawMinPlaceholder": "e.g., 0",
+    "rawMaxPlaceholder": "e.g., 5000",
+    "euRange": "Engineering Units (EU) Range",
+    "euMin": "EU Min",
+    "euMax": "EU Max",
+    "euMinPlaceholder": "e.g., 0",
+    "euMaxPlaceholder": "e.g., 50 or 1500",
+    "scalingFormulaHint": "Formula: EU = EUMin + (Raw - RawMin) / (RawMax - RawMin) * (EUMax - EUMin)",
+    "virtualBadge": "Virtual",
+    "scaledBadge": "Scaled",
     "import": {
       "title": "Import Devices",
       "requirementsTitle": "Import File Requirements:",
@@ -259,7 +280,14 @@
     },
     "validation": {
       "deviceNameRequired": "Device name is required",
-      "protocolRequired": "Protocol selection is required"
+      "protocolRequired": "Protocol selection is required",
+      "rawMinRequired": "Raw Min is required when scaling is enabled",
+      "rawMaxRequired": "Raw Max is required when scaling is enabled",
+      "euMinRequired": "EU Min is required when scaling is enabled",
+      "euMaxRequired": "EU Max is required when scaling is enabled",
+      "rawMaxEqualMin": "Raw Max cannot be equal to Raw Min",
+      "euMaxEqualMin": "EU Max cannot be equal to EU Min",
+      "mustBeNumber": "Must be a valid number"
     },
     "messages": {
       "pingSuccess": "Ping successful: Device is Online!",

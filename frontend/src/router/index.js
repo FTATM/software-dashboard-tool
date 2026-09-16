@@ -120,61 +120,56 @@ const router = createRouter({
 
 // GLOBAL ROUTE GUARD
 router.beforeEach(async (to, from) => {
-  const userStore = useUserStore(); //[cite: 1]
-  const isLoggedIn = !!userStore.user?.id; //[cite: 1]
+  const userStore = useUserStore();
+  const isLoggedIn = !!userStore.user?.id;
 
-  // 1. Guest Guard: Prevent logged-in users from seeing the login page
-  if (to.name === 'login' && isLoggedIn) { //[cite: 1]
-    return { name: 'dashboard' }; //[cite: 1]
+  // 1. Guest Guard
+  if (to.name === 'login' && isLoggedIn) {
+    return { name: 'dashboard' };
   }
 
-  // 2. Auth Guard: Check if the route requires authentication
-  if (to.meta.requiresAuth) { //[cite: 1]
-    if (!isLoggedIn) { //[cite: 1]
-      return { name: 'login' }; //[cite: 1]
+  // 2. Auth Guard
+  if (to.meta.requiresAuth) {
+    if (!isLoggedIn) {
+      return { name: 'login' };
     }
 
-    const permissionStore = usePermissionStore(); //[cite: 1]
-
-    // Destructure 'res' from useFetch to inspect status codes
+    const permissionStore = usePermissionStore();
     const {
-      data: userPermissionData, //[cite: 1, 3]
-      error: userPermissionError, //[cite: 1, 3]
-      res: userPermissionRes, //
-      execute: userPermissionApi //[cite: 1, 3]
-    } = useFetch(); //[cite: 1, 3]
+      data: userPermissionData,
+      error: userPermissionError, 
+      res: userPermissionRes, 
+      execute: userPermissionApi 
+    } = useFetch();
 
-    await userPermissionApi('/user/permission'); //[cite: 1]
+    // Fetches on every route change; backend serves from cache
+    await userPermissionApi('/user/permission'); 
 
     // Case 1: Permissions retrieved successfully
-    if (!userPermissionError.value && userPermissionData.value) { //[cite: 1]
-      permissionStore.setPermissions(userPermissionData.value.data); //[cite: 1]
-      return true; //[cite: 1]
-    }
-
-    // Case 2: Server Down / Network Offline (No response or 5xx)
-    const isServerDown = !userPermissionRes.value || userPermissionRes.value.status >= 500;
-
-    if (isServerDown) {
-      // Clear permissions so hasPermission(...) returns false -> displays <NoAccess />
-      permissionStore.setPermissions([]);
-
-      // Stay on the same page. Do NOT touch userStore and do NOT redirect to login.
+    if (!userPermissionError.value && userPermissionData.value?.data) { 
+      permissionStore.setPermissions(userPermissionData.value.data); 
       return true;
     }
 
-    // Case 3: Token Expired / Unauthorized (401, 403)
-    // (If fetchWithAuth has not already redirected via window.location.href)
-    toast.error(userPermissionError.value?.message || "Session expired. Please login again."); //[cite: 1]
-    userStore.setUser({}); //
-    localStorage.removeItem('user');
-    permissionStore.setPermissions([]);
+    // Case 2: Backend Offline or 5xx error -> preserve user session
+    const isServerDown = !userPermissionRes.value || userPermissionRes.value.status >= 500;
+    if (isServerDown) {
+      permissionStore.setPermissions([]);
+      return true;
+    }
 
-    return { name: 'login' }; //[cite: 1]
+    // Case 3: Unauthorized (401) -> cookie invalid/missing
+    if (userPermissionRes.value?.status === 401) {
+      toast.error(userPermissionError.value?.message || "Session expired. Please login again.");
+      userStore.setUser({});
+      permissionStore.setPermissions([]);
+      return { name: 'login' };
+    }
+
+    return true;
   }
 
-  // 3. Public Routes
-  return true; //[cite: 1]
+  return true;
 });
 
 export default router;

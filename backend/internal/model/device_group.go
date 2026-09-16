@@ -20,7 +20,7 @@ func (s *DeviceGroup) IsSame(req DeviceGroup) bool {
 	return s.GroupId == req.GroupId &&
 		s.GroupName == req.GroupName &&
 		s.Description == req.Description &&
-		s.Protocol == req.Protocol
+		ptrEqual(s.Protocol, req.Protocol)
 }
 
 // DeviceGroupMapping represents the payload to add/remove a device from a group
