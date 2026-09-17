@@ -66,6 +66,7 @@
       </TableData>
     </div>
 
+    <!-- Create / Edit Modal -->
     <dialog ref="ruleModal" class="modal">
       <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl">
         <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center">
@@ -79,13 +80,21 @@
 
         <form @submit.prevent="submitForm" autocomplete="off" class="p-6 bg-base-100 flex flex-col gap-4">
 
+          <!-- ⚡ Device Dropdown bound to realDeviceList only -->
           <label class="form-control w-full relative">
             <div class="label pb-1">
               <span class="label-text font-semibold">{{ $t('notifDevice.targetDevice') }}</span>
               <span class="label-text-alt text-error">*</span>
             </div>
-            <SearchableDropdown v-model="form.deviceId" :options="deviceList" labelKey="deviceName" valueKey="deviceId"
-              :placeholder="$t('common.searchDevice')" :error="v$.deviceId.$error" @blur="v$.deviceId.$touch()" />
+            <SearchableDropdown
+              v-model="form.deviceId"
+              :options="realDeviceList"
+              labelKey="deviceName"
+              valueKey="deviceId"
+              :placeholder="$t('common.searchDevice')"
+              :error="v$.deviceId.$error"
+              @blur="v$.deviceId.$touch()"
+            />
             <div class="label px-1 py-1 h-6">
               <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium">
                 {{ v$.deviceId.$errors[0].$message }}
@@ -95,8 +104,7 @@
 
           <div class="grid grid-cols-2 gap-4">
             <label class="form-control w-full">
-              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('notifDevice.condition') }}</span>
-              </div>
+              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('notifDevice.condition') }}</span></div>
               <select v-model="form.condition" @blur="v$.condition.$touch()"
                 class="select select-bordered w-full font-mono text-lg font-bold">
                 <option value=">">&gt;</option>
@@ -110,9 +118,7 @@
 
             <label class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">
-                  {{ $t('notifDevice.thresholdValue') }}
-                </span>
+                <span class="label-text font-semibold">{{ $t('notifDevice.thresholdValue') }}</span>
               </div>
               <input type="number" step="any" v-model="form.threshold" @blur="v$.threshold.$touch()"
                 :placeholder="$t('notifDevice.thresholdPlaceholder')"
@@ -128,16 +134,13 @@
           <label class="form-control w-full">
             <div class="label pb-1 flex justify-between">
               <span class="label-text font-semibold">{{ $t('notifDevice.alertMessageReason') }}</span>
-              <!-- Added character counter -->
               <span class="label-text-alt text-base-content/60 font-mono">{{ form.reason?.length || 0 }}/100</span>
             </div>
-            <!-- Added maxlength and vuelidate bindings -->
             <input type="text" v-model="form.reason" maxlength="100" @blur="v$.reason.$touch()"
               :placeholder="$t('notifDevice.alertMessagePlaceholder')"
               :class="['input input-bordered w-full', { 'input-error': v$.reason.$error }]" />
             <div class="label px-1 py-1 flex-col items-start gap-1">
               <span class="label-text-alt text-base-content/60">{{ $t('notifDevice.alertMessageDesc') }}</span>
-              <!-- Added error message display -->
               <span v-if="v$.reason.$error" class="label-text-alt text-error font-medium">
                 {{ v$.reason.$errors[0].$message }}
               </span>
@@ -153,8 +156,9 @@
           </div>
 
           <div class="border-t border-base-200 mt-2 pt-5 flex justify-end gap-3">
-            <button type="button" class="btn btn-ghost" @click="closeModal" :disabled="isSaving">{{ $t('common.cancel')
-            }}</button>
+            <button type="button" class="btn btn-ghost" @click="closeModal" :disabled="isSaving">
+              {{ $t('common.cancel') }}
+            </button>
             <button type="submit" class="btn btn-primary px-8" :disabled="isSaving">
               <span v-if="isSaving" class="loading loading-spinner loading-sm"></span>
               {{ isEditing ? $t('common.save') : $t('notifDevice.createRule') }}
@@ -174,8 +178,9 @@
           {{ $t('notifDevice.deleteWarning', { name: ruleToDelete?.deviceName }) }}
         </p>
         <div class="modal-action">
-          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">{{
-            $t('common.cancel') }}</button>
+          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
+            {{ $t('common.cancel') }}
+          </button>
           <button type="button" @click="confirmDelete" class="btn btn-error text-white" :disabled="isDeleting">
             <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span> {{ $t('common.delete') }}
           </button>
@@ -224,6 +229,11 @@ const ruleToDelete = ref(null);
 const ruleTableData = ref([]);
 const deviceList = ref([]);
 
+// ⚡ Filter out virtual sensors: only physical sensors can have alert rules
+const realDeviceList = computed(() => {
+  return deviceList.value.filter(d => !d.refDeviceId);
+});
+
 const tableColumns = computed(() => [
   { header: t('common.id'), accessorKey: 'ruleId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
   { header: t('common.device'), accessorKey: 'deviceName' },
@@ -265,7 +275,8 @@ const loadTable = async () => {
 };
 
 const loadDevices = async () => {
-  await fetchDevicesApi('/device/getalldevicename');
+  // ⚡ Use /device/getalldetail so refDeviceId is populated on each device
+  await fetchDevicesApi('/device/getalldetail');
   if (fetchDevices.value) {
     deviceList.value = fetchDevices.value.data || [];
   }
