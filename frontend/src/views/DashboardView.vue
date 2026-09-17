@@ -279,6 +279,8 @@ const loadUserCanvas = async () => {
     if (newMap.size > 0) {
       activeCanvasId.value = newMap.keys().next().value;
       loadCurrentCanvas();
+    } else {
+      toast.info(t('canvasDesign.noCanvas'));
     }
   } else if (userAllCanvasFetchError.value) {
     toast.error(t('common.messages.loadFailed', { item: "User Canvas" }));

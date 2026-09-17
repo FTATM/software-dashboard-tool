@@ -41,7 +41,8 @@ func (r *deviceRepo) GetById(ctx context.Context, id int) (*model.Device, error)
 			d.raw_min,
 			d.raw_max,
 			d.eu_min,
-			d.eu_max
+			d.eu_max,
+			d.updated_value_at
 		FROM device d
 		WHERE d.device_id = $1 AND d.deleted_at IS NULL
 	`
@@ -55,6 +56,7 @@ func (r *deviceRepo) GetById(ctx context.Context, id int) (*model.Device, error)
 		&device.RawMax,
 		&device.EuMin,
 		&device.EuMax,
+		&device.UpdatedValueAt,
 	)
 
 	if err != nil {
@@ -540,7 +542,8 @@ func (r *deviceRepo) GetByIds(ctx context.Context, id []int, active bool) ([]mod
 		d.raw_min,
 		d.raw_max,
 		d.eu_min,
-		d.eu_max
+		d.eu_max,
+		d.updated_value_at
 	FROM device d
 	LEFT JOIN device ref ON d.ref_device_id = ref.device_id AND ref.deleted_at IS NULL
 	WHERE (($1 = false) OR ($1 = true AND d.deleted_at IS NULL))

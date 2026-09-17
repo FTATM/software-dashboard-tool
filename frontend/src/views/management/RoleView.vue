@@ -20,6 +20,11 @@
       :is-loading="isLoading">
 
       <template #toolbar-actions>
+        <router-link :to="{ name: 'user' }" class="btn btn-ghost text-blue-600 font-bold underline mr-2">
+          <Icon icon="lucide:arrow-right-from-line" class="w-5 h-5 mr-1" />
+          {{ $t('user.title') }}
+        </router-link>
+
         <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
           <Icon icon="lucide:plus" class="w-5 h-5 stroke-[3]" />
           {{ $t('role.addRole') }}
@@ -95,7 +100,7 @@
               <!-- Flat Actions -->
               <div v-if="menu.availableActions && menu.availableActions.length > 0"
                 class="flex flex-wrap gap-4 pl-2 mb-2">
-                <label v-for="action in menu.availableActions" :key="action.actionId"
+                <label v-for="action in getSortedActions(menu.availableActions)" :key="action.actionId"
                   class="cursor-pointer label p-0 flex gap-2">
                   <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
                     :value="`${menu.menuId}-${action.actionId}`" v-model="form.selectedPermissions" />
@@ -110,7 +115,7 @@
                     {{ getMenuTranslation(sub.menuName) }}
                   </h5>
                   <div class="flex flex-wrap gap-4 pl-3">
-                    <label v-for="action in sub.availableActions" :key="action.actionId"
+                    <label v-for="action in getSortedActions(sub.availableActions)" :key="action.actionId"
                       class="cursor-pointer label p-0 flex gap-2">
                       <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
                         :value="`${sub.menuId}-${action.actionId}`" v-model="form.selectedPermissions" />
@@ -301,6 +306,29 @@ const toggleSelectAll = (menu) => {
       if (!form.value.selectedPermissions.includes(p)) form.value.selectedPermissions.push(p);
     });
   }
+};
+
+const getSortedActions = (actions) => {
+  if (!actions || !actions.length) return [];
+  
+  const orderMap = { 
+    'Display': 1, 
+    'Create': 2, 
+    'Update': 3, 
+    'Delete': 4 
+  };
+
+  return [...actions].sort((a, b) => {
+    const orderA = orderMap[a.actionName] || 99;
+    const orderB = orderMap[b.actionName] || 99;
+
+    if (orderA !== orderB) {
+      return orderA - orderB; // Sort by the defined priority
+    }
+    
+    // If neither is in the orderMap (both are 99), sort alphabetically A-Z
+    return a.actionName.localeCompare(b.actionName);
+  });
 };
 
 const openCreateModal = () => {

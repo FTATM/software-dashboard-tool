@@ -110,7 +110,11 @@ const hasData = computed(() => {
 
 const displayValue = computed(() => {
   const mode = chartData.value.aggregationMode || 'live_single';
-  const decimals = chartData.value.decimalPlaces !== undefined ? chartData.value.decimalPlaces : 0;
+  
+  // ⚡ Strict clamping: locks decimals to 0-3
+  const rawDec = chartData.value.decimalPlaces !== undefined ? Number(chartData.value.decimalPlaces) : 0;
+  const decimals = Math.min(Math.max(isNaN(rawDec) ? 0 : rawDec, 0), 3);
+
   const ids = props.widgetData.deviceIds || [];
   if (ids.length === 0) return '--';
   let result = 0;

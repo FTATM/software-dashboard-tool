@@ -107,13 +107,17 @@
             :placeholder="$t('common.unitPlaceholder')" />
         </label>
 
+        <!-- ⚡ LOCKED 0 - 3 DECIMALS OPTION -->
         <label class="form-control w-full sm:col-span-2">
           <div class="label pb-1">
             <span class="label-text font-semibold">{{ $t('common.decimalPlaces') }}</span>
-            <span class="label-text-alt text-base-content/60">{{ $t('scoreCard.config.decimalHint') }}</span>
           </div>
-          <input type="number" v-model="localConfig.decimalPlaces" min="0" max="4"
-            class="input input-bordered input-sm w-full" />
+          <select v-model.number="localConfig.decimalPlaces" class="select select-bordered select-sm w-full font-semibold">
+            <option :value="0">0 ({{ $t('common.integer') || '0' }})</option>
+            <option :value="1">1 (0.0)</option>
+            <option :value="2">2 (0.00)</option>
+            <option :value="3">3 (0.000)</option>
+          </select>
         </label>
       </div>
     </div>
@@ -132,6 +136,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+// Clamp to range [0, 3]
+const rawInitialDecimals = props.modelValue.decimalPlaces !== undefined ? Number(props.modelValue.decimalPlaces) : 0;
+const clampedInitialDecimals = Math.min(Math.max(isNaN(rawInitialDecimals) ? 0 : rawInitialDecimals, 0), 3);
+
 const localConfig = ref({
   visualType: props.modelValue.visualType || 'line',
   icon: props.modelValue.icon || 'lucide:activity',
@@ -141,7 +149,7 @@ const localConfig = ref({
   maxPoints: props.modelValue.maxPoints || 1000,
   prefix: props.modelValue.prefix || '',
   unit: props.modelValue.unit || '',
-  decimalPlaces: props.modelValue.decimalPlaces !== undefined ? props.modelValue.decimalPlaces : 0
+  decimalPlaces: clampedInitialDecimals
 });
 
 watch(localConfig, (newVal) => {

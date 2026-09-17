@@ -85,12 +85,17 @@
                         :placeholder="$t('common.unitPlaceholder')" />
                 </label>
 
+                <!-- ⚡ LOCKED 0 - 3 DECIMALS OPTION -->
                 <label class="form-control w-full sm:col-span-2">
                     <div class="label pb-1">
                         <span class="label-text font-semibold">{{ $t('common.decimalPlaces') }}</span>
                     </div>
-                    <input type="number" v-model="localConfig.decimalPlaces" min="0" max="4"
-                        class="input input-bordered input-sm w-full" />
+                    <select v-model.number="localConfig.decimalPlaces" class="select select-bordered select-sm w-full font-semibold">
+                        <option :value="0">0 ({{ $t('common.integer') || '0' }})</option>
+                        <option :value="1">1 (0.0)</option>
+                        <option :value="2">2 (0.00)</option>
+                        <option :value="3">3 (0.000)</option>
+                    </select>
                 </label>
             </div>
 
@@ -121,6 +126,10 @@ const { isLoading: isUploading, error: uploadError, data: uploadData, execute: u
 const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const activeDevices = computed(() => props.selectedDeviceIds || []);
 
+// Clamp to range [0, 3]
+const rawInitialDecimals = props.modelValue.decimalPlaces !== undefined ? Number(props.modelValue.decimalPlaces) : 1;
+const clampedInitialDecimals = Math.min(Math.max(isNaN(rawInitialDecimals) ? 1 : rawInitialDecimals, 0), 3);
+
 const localConfig = ref({
     imageUrl: props.modelValue.imageUrl || '',
     imageFit: props.modelValue.imageFit || 'contain',
@@ -130,21 +139,19 @@ const localConfig = ref({
     overlayBgColor: props.modelValue.overlayBgColor || '#ffffff',
     overlayTextColor: props.modelValue.overlayTextColor || '#334155',
     unit: props.modelValue.unit || '',
-    decimalPlaces: props.modelValue.decimalPlaces !== undefined ? props.modelValue.decimalPlaces : 1
+    decimalPlaces: clampedInitialDecimals
 });
 
 const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Check MIME type
     if (!allowedMimeTypes.includes(file.type)) {
         uploadError.value = { message: t('visualizationWidget.messages.fileNotAllowed') };
-        event.target.value = ''; // Reset file input
+        event.target.value = '';
         return;
     }
 
-    // Optional: Add a max size check (e.g., 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
         uploadError.value = { message: t('visualizationWidget.messages.fileTooLarge') };

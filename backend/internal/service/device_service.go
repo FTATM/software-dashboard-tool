@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -333,15 +334,15 @@ func (s *deviceService) StartPublic(ctx context.Context) {
 					continue
 				}
 
-				// 1. Unpack DB fixed-point integer (e.g. 50000 -> 50.0)
-				rawDecimal := chartDeviceData.ValueData / float64(model.DeviceScale)
-				chartDeviceData.ValueData = model.Remap(
-					rawDecimal,
-					chartDeviceData.RawMin,
-					chartDeviceData.RawMax,
-					chartDeviceData.EuMin,
-					chartDeviceData.EuMax,
-				)
+				// 1. Base scale
+				scaledVal := chartDeviceData.ValueData / float64(model.DeviceScale)
+
+				// 2. Remap EU using the ranges already retrieved by GetByIdChartDeviceData
+				euVal := model.Remap(scaledVal, chartDeviceData.RawMin, chartDeviceData.RawMax, chartDeviceData.EuMin, chartDeviceData.EuMax)
+
+				// 3. Round to 2 decimals inline
+				chartDeviceData.ValueData = math.Round(euVal*1000) / 1000
+
 				masterDataMap[deviceId] = chartDeviceData
 			}
 
@@ -463,9 +464,12 @@ func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, ma
 		for _, log := range sourceLogs {
 			tsMillis := float64(log.ReceivedAt.UnixMilli())
 			rawVal := float64(log.ValueData) / float64(model.DeviceScale)
-			euVal := model.Remap(rawVal, meta.RawMin, meta.RawMax, meta.EuMin, meta.EuMax)
 
-			historyData[reqId] = append(historyData[reqId], [2]float64{tsMillis, euVal})
+			// Remap EU + round inline to 2 decimals
+			euVal := model.Remap(rawVal, meta.RawMin, meta.RawMax, meta.EuMin, meta.EuMax)
+			valData := math.Round(euVal*1000) / 1000
+
+			historyData[reqId] = append(historyData[reqId], [2]float64{tsMillis, valData})
 		}
 	}
 

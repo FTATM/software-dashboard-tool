@@ -98,11 +98,11 @@ func (n *notificationClient) SendEmail(ctx context.Context, emailUsers []model.U
 		}
 
 		// 3. Construct the email headers and body
-		displayName := "IoT System Alerts"
+		displayName := "Software Dashboard Tool System Alerts"
 
 		// ⚡ Add the From header using your friendly name and your Gmail Username
 		fromHeader := fmt.Sprintf("From: %s <%s>\r\n", displayName, n.email.Username)
-		subject := "Subject: IoT System Alert\r\n"
+		subject := "Subject: SDT System Alert\r\n"
 		mime := "MIME-version: 1.0;\r\nContent-Type: text/plain; charset=\"UTF-8\";\r\n\r\n"
 
 		body := u.Msg

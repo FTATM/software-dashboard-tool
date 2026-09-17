@@ -141,6 +141,7 @@
     "query": "สืบค้น",
     "onHold": "กดค้าง...",
     "displayOptions": "ตัวเลือกการแสดงผล",
+    "integer": "จำนวนเต็ม",
     "validation": {
       "maxLength": "ความยาวสูงสุดไม่เกิน {len} ตัวอักษร"
     },
@@ -508,6 +509,7 @@
     "height": "ความสูง",
     "saveSettings": "บันทึกการตั้งค่า",
     "newWidget": "{type} ใหม่",
+    "noCanvas":"ไม่มีแคนวาส",
     "widgets": {
       "barChart": "กราฟแท่ง",
       "rowChart": "กราฟแท่งแนวนอน",
@@ -839,8 +841,7 @@
         "max": "ค่าสูงสุดตลอดช่วงเวลา"
       },
       "historyRangeSettings": "การตั้งค่าช่วงข้อมูลย้อนหลัง",
-      "valueFormatting": "รูปแบบของค่า",
-      "decimalHint": "ระบุ 0 สำหรับจำนวนเต็ม"
+      "valueFormatting": "รูปแบบของค่า"
     }
   },
   "scatterChart": {

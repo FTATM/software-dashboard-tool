@@ -141,6 +141,7 @@
     "query": "Query",
     "onHold": "Keep holding...",
     "displayOptions": "Display Options",
+    "integer": "Integer",
     "validation": {
       "maxLength": "Maximum {len} characters allowed"
     },
@@ -507,6 +508,7 @@
     "height": "Height",
     "saveSettings": "Save Settings",
     "newWidget": "New {type}",
+    "noCanvas":"No Canvas Selected",
     "widgets": {
       "barChart": "Bar Chart",
       "rowChart": "Row Chart",
@@ -839,8 +841,7 @@
       },
       "historyRangeSettings": "History Range Settings",
       "timeframe": "Timeframe",
-      "valueFormatting": "Value Formatting",
-      "decimalHint": "0 for whole numbers"
+      "valueFormatting": "Value Formatting"
     }
   },
   "scatterChart": {

@@ -196,7 +196,7 @@
         <div class="modal-action">
           <button type="button" @click="closeDeleteModal" class="btn btn-ghost">{{ $t('common.noCancel') }}</button>
           <button type="button" @click="confirmDelete" class="btn btn-error text-white">{{ $t('common.yesDelete')
-          }}</button>
+            }}</button>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button @click="closeDeleteModal">close</button></form>
@@ -282,7 +282,7 @@
                     </template>
                     <span v-else class="text-xs text-base-content/50 font-medium my-auto italic">{{
                       $t('canvasDesign.noDevicesInGroup')
-                    }}</span>
+                      }}</span>
                   </div>
                 </div>
               </div>
@@ -315,7 +315,7 @@
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.start')
-                    }}</span>
+                      }}</span>
                     <input type="color" v-model="configForm.widgetStyle.bgHex"
                       class="h-9 w-full cursor-pointer rounded border border-base-300 p-0 shadow-sm" />
                   </div>
@@ -323,14 +323,14 @@
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.end')
-                    }}</span>
+                      }}</span>
                     <input type="color" v-model="configForm.widgetStyle.bgHex2"
                       class="h-9 w-full cursor-pointer rounded border border-base-300 p-0 shadow-sm" />
                   </div>
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.angle')
-                    }}</span>
+                      }}</span>
                     <select v-model="configForm.widgetStyle.bgGradientDir"
                       class="select select-bordered select-sm h-9 w-full">
                       <option value="135deg">{{ $t('canvasDesign.directions.diagonal1') }}</option>
@@ -644,6 +644,8 @@ const loadUserCanvas = async () => {
     if (newMap.size > 0) {
       activeCanvasId.value = newMap.keys().next().value;
       loadCurrentCanvas();
+    } else {
+      toast.info(t('canvasDesign.noCanvas'));
     }
   } else if (userAllCanvasFetchError.value) {
     toast.error(t('common.messages.loadFailed', { item: "User Canvas" }));

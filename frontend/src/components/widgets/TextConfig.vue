@@ -53,7 +53,7 @@
         ref="editorRef"
         contenteditable="true"
         @input="updateContent"
-        @blur="updateContent"
+        @blur="updateContentImmediate"
         class="rich-text-container textarea textarea-bordered w-full min-h-[200px] max-h-[300px] overflow-y-auto bg-base-100 focus:outline-none focus:border-primary"
         :style="{ 
           textAlign: localConfig.textAlign, 
@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Icon } from '@iconify/vue'; 
 
@@ -90,6 +90,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 const editorRef = ref(null);
+let debounceTimer = null;
 
 const localConfig = ref({
   content: props.modelValue.content || '',
@@ -101,8 +102,8 @@ const localConfig = ref({
 
 const formatText = (command) => {
   document.execCommand(command, false, null);
-  editorRef.value.focus();
-  updateContent();
+  editorRef.value?.focus();
+  updateContentImmediate();
 };
 
 const updateContent = () => {
@@ -111,15 +112,33 @@ const updateContent = () => {
   }
 };
 
-watch(localConfig, (newVal) => {
-  emit('update:modelValue', JSON.parse(JSON.stringify(newVal)));
-}, { deep: true });
+const updateContentImmediate = () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  updateContent();
+  emit('update:modelValue', { ...localConfig.value });
+};
+
+// Debounce emit while typing to eliminate per-keystroke serialization lag
+watch(
+  localConfig,
+  (newVal) => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      emit('update:modelValue', { ...newVal });
+    }, 150);
+  },
+  { deep: true }
+);
 
 onMounted(() => {
   if (editorRef.value) {
     editorRef.value.innerHTML = localConfig.value.content || t('textWidget.config.placeholder');
   }
-  emit('update:modelValue', JSON.parse(JSON.stringify(localConfig.value)));
+  emit('update:modelValue', { ...localConfig.value });
+});
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer);
 });
 </script>
 

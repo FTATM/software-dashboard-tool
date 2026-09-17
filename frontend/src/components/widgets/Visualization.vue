@@ -111,7 +111,11 @@ const deviceList = computed(() => {
     if (hasData) {
       name = stream.name || name;
       const val = Number(stream.value);
-      const decimals = chartConfig.value.decimalPlaces !== undefined ? chartConfig.value.decimalPlaces : 1;
+      
+      // ⚡ Strict clamping: locks decimals to 0-3
+      const rawDec = chartConfig.value.decimalPlaces !== undefined ? Number(chartConfig.value.decimalPlaces) : 1;
+      const decimals = Math.min(Math.max(isNaN(rawDec) ? 1 : rawDec, 0), 3);
+      
       displayValue = isNaN(val) ? stream.value : val.toFixed(decimals);
     }
     

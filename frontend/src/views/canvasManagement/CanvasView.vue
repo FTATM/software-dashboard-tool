@@ -19,8 +19,12 @@
     <!-- Canvas Table -->
     <TableData :data="canvasTable" :columns="tableColumns" :initial-sorting="[{ id: 'canvasId', desc: false }]"
       :is-loading="isLoadingCanvases">
-
       <template #toolbar-actions>
+        <router-link :to="{ name: 'canvasAccess' }" class="btn btn-ghost text-blue-600 font-bold underline mr-2">
+          <Icon icon="lucide:arrow-right-from-line" class="w-5 h-5 mr-1" />
+          {{ $t('canvasAccess.title') }}
+        </router-link>
+
         <button @click="openCreateModal" class="btn btn-primary text-white">
           <Icon icon="lucide:plus" class="w-5 h-5 mr-1" /> {{ $t('canvas.createCanvas') }}
         </button>
@@ -213,7 +217,7 @@ const submitForm = async () => {
     closeFormModal();
     await loadCanvases();
   } else {
-    toast.error(handleError(mutateError , 'common.messages.saveError'));
+    toast.error(handleError(mutateError, 'common.messages.saveError'));
   }
 };
 
@@ -237,7 +241,7 @@ const confirmDelete = async () => {
     closeDeleteModal();
     await loadCanvases();
   } else {
-    toast.error(handleError(mutateError , 'common.messages.deleteError'));
+    toast.error(handleError(mutateError, 'common.messages.deleteError'));
   }
 };
 
