@@ -77,9 +77,6 @@ services:
     build: 
       context: ./frontend
       dockerfile: Dockerfile 
-      args:
-        VITE_LINE_LIFF_ID: ${VITE_LINE_LIFF_ID}
-        VITE_LINE_URL_OA_BOT: ${VITE_LINE_URL_OA_BOT}
     ports:
       - "80:80" # Maps port 80 on your host machine to port 80 in the container
     depends_on:
@@ -87,6 +84,14 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Asia/Bangkok
+      - VITE_LINE_LIFF_ID=2011660768-r8L45Pf5
+      - VITE_LINE_URL_OA_BOT=https://line.me/R/ti/p/@582aohiq
+    command: >
+      /bin/sh -c "
+      sed -i \"s|__VITE_LINE_LIFF_ID__|$$VITE_LINE_LIFF_ID|g\" /usr/share/nginx/html/assets/*.js &&
+      sed -i \"s|__VITE_LINE_URL_OA_BOT__|$$VITE_LINE_URL_OA_BOT|g\" /usr/share/nginx/html/assets/*.js &&
+      nginx -g 'daemon off;'
+      "
     logging:
       driver: "json-file"
       options:

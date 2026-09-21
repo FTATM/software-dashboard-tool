@@ -110,6 +110,35 @@ const { t, locale } = useI18n();
 const { handleError } = useErrorHandler();
 const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || '';
 
+// Fallback in-memory storage for iOS WebKit restrictions
+const memoryStorage = new Map();
+
+const safeStorage = {
+  getItem: (key, fallback = null) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const value = window.localStorage.getItem(key);
+        if (value !== null && value !== undefined) {
+          return value;
+        }
+      }
+    } catch {
+      // Caught SecurityError / QuotaExceededError in iOS WebKit
+    }
+    return memoryStorage.get(key) ?? fallback;
+  },
+  setItem: (key, value) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch {
+      // Silently fall back to memory store when storage is blocked
+    }
+    memoryStorage.set(key, value);
+  }
+};
+
 const isLiffInitializing = ref(true);
 const isInLineApp = ref(true);
 const lineProfile = ref(null);
@@ -122,7 +151,7 @@ const form = ref({
 
 const changeLang = (lang) => {
   locale.value = lang;
-  localStorage.setItem('lang', lang);
+  safeStorage.setItem('lang', lang);
 };
 
 const {
@@ -133,7 +162,8 @@ const {
 } = useMutation();
 
 onMounted(async () => {
-  const savedLang = localStorage.getItem('lang');
+  // Safely read saved language
+  const savedLang = safeStorage.getItem('lang');
   if (savedLang) {
     locale.value = savedLang;
   }
