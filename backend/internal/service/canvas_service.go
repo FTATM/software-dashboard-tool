@@ -401,6 +401,7 @@ func (s *canvasService) ExecuteDynamicQuery(ctx context.Context, rawQuery string
 		"password",
 		"password_hash",
 		"token",
+		"line_user_token",
 		"refresh_token",
 		"api_key",
 		"secret",

@@ -137,24 +137,10 @@ func InitializeApi(ctx context.Context) (App, error) {
 	s3Client := client.NewS3Client(s3Config)
 	scheduleClient := client.NewScheduleClient(scheduleEngineURL, internalSecret)
 	deviceGatewayClient := client.NewDeviceGatewayClient(deviceGatewayURL, internalSecret)
-	notificationClient := client.NewNotificationClient(
-		config.Sms{
-			Url:    GetEnvOrDefault("SMS_API_URL", ""),
-			Key:    GetEnvOrDefault("SMS_API_KEY", ""),
-			Secret: GetEnvOrDefault("SMS_API_SECRET", ""),
-			Sender: GetEnvOrDefault("SMS_SENDER", ""),
-		},
-		config.Email{
-			Host:       GetEnvOrDefault("MAIL_HOST", ""),
-			Port:       GetEnvOrDefault("MAIL_PORT", ""),
-			Encryption: GetEnvOrDefault("MAIL_ENCRYPTION", ""),
-			Username:   GetEnvOrDefault("MAIL_USERNAME", ""),
-			Password:   GetEnvOrDefault("MAIL_PASSWORD", ""),
-		},
-		config.Line{
-			Token: GetEnvOrDefault("LINE_NOTIFY_TOKEN", ""),
-		},
-	)
+	lineClient := client.NewLineClient(config.Line{
+		LineChannelID:      GetEnvOrDefault("LINE_CHANNEL_ID", ""),
+		ChannelAccessToken: GetEnvOrDefault("LINE_CHANNEL_ACCESS_TOKEN", ""),
+	})
 
 	//? service
 	roleCache := service.NewRoleCache()
@@ -166,14 +152,14 @@ func InitializeApi(ctx context.Context) (App, error) {
 	roleService := service.NewRoleService(txManager, roleRepo, auditLogRepo, roleCache)
 	scheduleService := service.NewScheduleService(txManager, scheduleRepo, auditLogRepo)
 	logReportService := service.NewLogReportService(logReportRepo)
-	notificationService := service.NewNotificationService(txManager, notificationRepo, auditLogRepo, notificationClient, make(chan []model.DeviceData), cooldownNotifSend)
+	notificationService := service.NewNotificationService(txManager, notificationRepo, auditLogRepo, nil, make(chan []model.DeviceData), cooldownNotifSend)
 
 	handlers := router.RouterHandlers{
 		Widget:       handler.NewWidgetHandler(widgetService, roleService),
 		Canvas:       handler.NewCanvasHandler(canvasService, roleService),
 		WidgetType:   handler.NewWidgetTypeHandler(widgetTypeService),
-		User:         handler.NewUserHandler(userService, roleService, httpsConfig),
-		Device:       handler.NewDeviceHandler(deviceService, roleService, deviceGatewayClient, notificationClient, auditLogRepo),
+		User:         handler.NewUserHandler(userService, roleService, httpsConfig, lineClient),
+		Device:       handler.NewDeviceHandler(deviceService, roleService, deviceGatewayClient, auditLogRepo),
 		Role:         handler.NewRoleHandler(roleService),
 		Schedule:     handler.NewScheduleHandler(scheduleService, roleService, scheduleClient),
 		LogReport:    handler.NewLogReportHandler(logReportService),

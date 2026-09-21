@@ -104,7 +104,7 @@
               <div class="label px-1 py-1 h-6">
                 <span v-if="v$.email.$error" class="label-text-alt text-error font-medium">{{
                   v$.email.$errors[0].$message
-                }}</span>
+                  }}</span>
               </div>
             </label>
 
@@ -147,6 +147,23 @@
                   v$.password.$errors[0].$message }}</span>
               </div>
             </label>
+
+            <!-- Line Token Input -->
+            <label class="form-control w-full sm:col-span-2 mb-2">
+              <div class="label pb-1">
+                <span class="label-text font-semibold">{{ $t('user.lineToken') }}</span>
+              </div>
+              <div class="flex gap-2">
+                <input type="text" :value="form.lineUserToken ? `${form.lineUserToken.slice(0, 8)}...` : ''"
+                  :placeholder="$t('user.lineToken')" disabled
+                  class="input input-bordered w-full disabled:bg-base-200/50 disabled:text-base-content/60" />
+                <button type="button" @click="openLineQrCode"
+                  class="btn bg-[#06c755] hover:bg-[#05a546] text-white border-none shrink-0">
+                  <Icon icon="lucide:qr-code" class="w-5 h-5 mr-1" />
+                  {{ $t('user.connectLine') }}
+                </button>
+              </div>
+            </label>
           </div>
 
           <!-- Role Assignment -->
@@ -161,7 +178,7 @@
             <div class="label px-1 py-1 h-6">
               <span v-if="v$.roleId.$error" class="label-text-alt text-error font-medium">{{
                 v$.roleId.$errors[0].$message
-              }}</span>
+                }}</span>
             </div>
           </label>
 
@@ -184,6 +201,52 @@
         </form>
       </div>
       <form method="dialog" class="modal-backdrop"><button @click="closeModal">close</button></form>
+    </dialog>
+
+    <!-- Line QR Code Modal -->
+    <dialog ref="lineQrModal" class="modal z-[210]">
+      <div class="modal-box max-w-sm p-6 text-center shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <Icon icon="bi:line" class="w-6 h-6 text-[#06c755]" />
+            <h3 class="text-lg font-bold text-base-content">{{ $t('user.lineQrTitle') }}</h3>
+          </div>
+          <button class="btn btn-sm btn-circle btn-ghost" @click="closeLineQrModal">
+            <Icon icon="lucide:x" class="w-4 h-4" />
+          </button>
+        </div>
+
+        <p class="text-xs text-base-content/60 mb-4">
+          {{ $t('user.lineQrSubtitle') }}
+        </p>
+
+        <!-- QR Display if URL exists -->
+        <template v-if="lineAddFriendUrl">
+          <div class="flex justify-center p-4 bg-white rounded-2xl border border-base-300 w-fit mx-auto shadow-inner">
+            <QrcodeVue :value="lineAddFriendUrl" :size="190" level="H" render-as="svg" />
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-base-200 space-y-2">
+            <p class="text-xs font-semibold text-base-content/70">
+              {{ $t('user.lineOfficialAccount') }} <span class="text-primary font-mono font-bold">{{ botHandle }}</span>
+            </p>
+
+            <a :href="lineAddFriendUrl" target="_blank" rel="noopener noreferrer"
+              class="btn bg-[#06c755] hover:bg-[#05a546] text-white btn-sm w-full gap-2 mt-1 border-none shadow-sm">
+              <Icon icon="bi:line" class="w-4 h-4" />
+              {{ $t('user.openDirectlyInLine') }}
+            </a>
+          </div>
+        </template>
+
+        <!-- Fallback if URL is not configured -->
+        <div v-else class="p-6 bg-base-200/60 border border-base-300 rounded-xl text-center">
+          <Icon icon="lucide:alert-circle" class="w-8 h-8 text-warning mx-auto mb-2" />
+          <p class="text-sm font-medium text-base-content/70">{{ $t('common.noDataAvailable') }}</p>
+          <p class="text-xs text-base-content/50 mt-1">{{ $t('user.noLineConfig') }}</p>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button @click="closeLineQrModal">close</button></form>
     </dialog>
 
     <!-- Delete Modal -->
@@ -213,6 +276,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import QrcodeVue from 'qrcode.vue';
 import { useMutation } from '@/composables/useMutation';
 import { useFetch } from '@/composables/useFetch';
 import { useVuelidate } from '@vuelidate/core';
@@ -227,7 +291,7 @@ import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 
 const { t } = useI18n();
-const mainMenuName = 'User'
+const mainMenuName = 'User';
 
 const { error: userAddedError, execute: userAddedApi } = useMutation();
 const { error: userUpdatedError, execute: userUpdatedApi } = useMutation();
@@ -238,7 +302,11 @@ const { data: roleData, error: roleAllError, execute: roleFetchApi } = useFetch(
 const permissionStore = usePermissionStore();
 const { hasPermission } = permissionStore;
 
+// Default to empty string instead of test URL
+const URL_OA_BOT = import.meta.env.VITE_LINE_URL_OA_BOT || '';
 const userModal = ref(null);
+const lineQrModal = ref(null);
+const lineAddFriendUrl = ref(URL_OA_BOT);
 const isEditing = ref(false);
 const editingUserId = ref(null);
 const userTable = ref([]);
@@ -265,6 +333,7 @@ const form = ref({
   password: '',
   active: true,
   roleId: null,
+  lineUserToken: ''
 });
 
 const rules = computed(() => ({
@@ -296,13 +365,27 @@ const v$ = useVuelidate(rules, form);
 
 const getRoleName = (id) => {
   const found = rolesMaster.value.has(id) ? rolesMaster.value.get(id) : null;
-  return found ? found.roleName : 'No Role';
+  return found ? found.roleName : t('common.none');
 };
+
+const openLineQrCode = () => {
+  lineQrModal.value.showModal();
+};
+
+const closeLineQrModal = () => {
+  lineQrModal.value.close();
+};
+
+const botHandle = computed(() => {
+  if (!lineAddFriendUrl.value) return '-';
+  const parts = lineAddFriendUrl.value.split('/');
+  return parts[parts.length - 1] || '-';
+});
 
 const openCreateModal = () => {
   isEditing.value = false;
   editingUserId.value = null;
-  form.value = { firstName: '', lastName: '', email: '', tel: '', username: '', password: '', active: true, roleId: null };
+  form.value = { firstName: '', lastName: '', email: '', tel: '', username: '', password: '', active: true, roleId: null, lineUserToken: '' };
   v$.value.$reset();
   userModal.value.showModal();
 };
@@ -310,7 +393,17 @@ const openCreateModal = () => {
 const openEditModal = (user) => {
   isEditing.value = true;
   editingUserId.value = user.userId;
-  form.value = { firstName: user.firstName, lastName: user.lastName, email: user.email || '', tel: user.tel || '', username: user.username, password: '', active: user.active, roleId: user.roleId };
+  form.value = {
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email || '',
+    tel: user.tel || '',
+    username: user.username,
+    password: '',
+    active: user.active,
+    roleId: user.roleId,
+    lineUserToken: user.lineUserToken || ''
+  };
   v$.value.$reset();
   userModal.value.showModal();
 };
@@ -342,7 +435,8 @@ const loadTable = async () => {
       tel: i.tel,
       username: i.username,
       active: i.active,
-      roleId: i.roleId
+      roleId: i.roleId,
+      lineUserToken: i.lineUserToken
     }));
   }
 };

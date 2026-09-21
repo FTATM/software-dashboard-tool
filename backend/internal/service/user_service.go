@@ -219,22 +219,14 @@ func (s *userService) GetPermissionMapByUserId(ctx context.Context, userId int) 
 func (s *userService) LoginUserJwt(ctx context.Context, creds *model.LoginCredentials, issueTime, expTime time.Time, clientInfo *auth.ClientInfo) (*model.User, string, error) {
 	const fname = "LoginUserJwt"
 	var tokenString string
-	user, err := s.userRepo.GetByUsername(ctx, creds.Username)
+
+	user, match, err := s.validateUserLogin(ctx, creds)
 	if err != nil {
 		return nil, tokenString, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
-	if !user.Active {
-		return nil, tokenString, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrNotActive)
-	}
-
-	match, err := argon2id.ComparePasswordAndHash(creds.Password, user.PasswordHash)
-	if err != nil {
-		return nil, tokenString, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
-	}
-
-	if !match {
-		return nil, tokenString, fmt.Errorf("[%s]>[%s]: Invalid username or password", s.prefixError, fname)
+	if user == nil || !match {
+		return nil, tokenString, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidLogin)
 	}
 
 	claims := &auth.Claim{
@@ -292,6 +284,26 @@ func (s *userService) LoginUserJwt(ctx context.Context, creds *model.LoginCreden
 	return user, tokenString, nil
 }
 
+func (s *userService) validateUserLogin(ctx context.Context, creds *model.LoginCredentials) (*model.User, bool, error) {
+	const fname = "validateLogin"
+
+	user, err := s.userRepo.GetByUsername(ctx, creds.Username)
+	if err != nil {
+		return nil, false, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if !user.Active {
+		return nil, false, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrNotActive)
+	}
+
+	match, err := argon2id.ComparePasswordAndHash(creds.Password, user.PasswordHash)
+	if err != nil {
+		return nil, false, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	return user, match, nil
+}
+
 func (s *userService) GetAllDetail(ctx context.Context, active bool) ([]model.UserDetail, error) {
 	const fname = "GetAllDetail"
 	users, err := s.userRepo.GetAll(ctx, active)
@@ -301,8 +313,22 @@ func (s *userService) GetAllDetail(ctx context.Context, active bool) ([]model.Us
 	userDetails := make([]model.UserDetail, 0, len(users))
 
 	for _, u := range users {
+		var truncatedToken *string
+		if u.LineUserToken != nil {
+			t := (*u.LineUserToken)[:min(len(*u.LineUserToken), 10)]
+			truncatedToken = &t
+		}
+
 		detail := model.UserDetail{
-			User: u,
+			UserId:        u.UserId,
+			FirstName:     u.FirstName,
+			LastName:      u.LastName,
+			Username:      u.Username,
+			Active:        u.Active,
+			RoleId:        u.RoleId,
+			Email:         u.Email,
+			Tel:           u.Tel,
+			LineUserToken: truncatedToken,
 		}
 
 		userDetails = append(userDetails, detail)
@@ -351,6 +377,60 @@ func (s *userService) DeleteUser(ctx context.Context, deleteUserId, authUserId i
 	}
 
 	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	return nil
+}
+
+func (s *userService) UserLinkLineUserToken(ctx context.Context, linkLine model.UserLinkLine, authUserId int) error {
+	const fname = "UserLinkLineToken"
+	var err error
+
+	if len(linkLine.LineUserToken) == 0 || len(linkLine.Username) == 0 || len(linkLine.Password) == 0 {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidLogin)
+	}
+
+	user, match, err := s.validateUserLogin(ctx, &model.LoginCredentials{Username: linkLine.Username, Password: linkLine.Password})
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if user == nil || !match {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidLogin)
+	}
+
+	tx, err := s.txManager.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	defer tx.Rollback(ctx)
+
+	err = s.userRepo.UpdateLineUserToken(ctx, user.UserId, linkLine.LineUserToken)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	newData, err := model.StructToDynamicJSON(map[string]any{"lineUserToken": linkLine.LineUserToken})
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+	audit := model.AuditLog{
+		EntityType: "user",
+		EntityId:   strconv.Itoa(user.UserId),
+		MenuType:   "User",
+		Action:     model.UpdateAction,
+		ChangedBy:  authUserId,
+		OldData:    nil,
+		NewData:    newData,
+	}
+
+	if err = s.auditLogRepo.Create(tx.Context(), []model.AuditLog{audit}); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 

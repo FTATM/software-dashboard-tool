@@ -36,8 +36,10 @@ func (r *notificationRepo) GetUserNotifAllDetail(ctx context.Context) ([]model.U
     		u.username,
     		COALESCE(u.email, '') AS email,
     		COALESCE(u.tel, '') AS tel,
+    		u.line_user_token,
     		COALESCE(n.email_active, FALSE) AS email_active,
-    		COALESCE(n.sms_active, FALSE) AS sms_active
+    		COALESCE(n.sms_active, FALSE) AS sms_active,
+			COALESCE(n.line_active, FALSE) AS line_active
 		FROM "user" u
 		LEFT JOIN user_notification n ON u.user_id = n.user_id
 		WHERE u.deleted_at IS NULL
@@ -63,11 +65,12 @@ func (r *notificationRepo) GetUserNotifById(ctx context.Context, userId int) (*m
 		SELECT 
 			user_id,
 			email_active,
-			sms_active
+			sms_active,
+			line_active
 		FROM user_notification
 		WHERE user_id = $1
 		`
-	err := r.db(ctx).QueryRow(ctx, query, userId).Scan(&userNotif.UserId, &userNotif.EmailActive, &userNotif.SmsActive)
+	err := r.db(ctx).QueryRow(ctx, query, userId).Scan(&userNotif.UserId, &userNotif.EmailActive, &userNotif.SmsActive, &userNotif.LineActive)
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
@@ -78,16 +81,17 @@ func (r *notificationRepo) GetUserNotifById(ctx context.Context, userId int) (*m
 func (r *notificationRepo) UpsertUserNotif(ctx context.Context, userNotif model.UserNotification) error {
 	const fname = "UpsertUserNotif"
 	query := `
-	INSERT INTO user_notification (user_id, email_active, sms_active, updated_at)
-	VALUES ($1, $2, $3, now())
+	INSERT INTO user_notification (user_id, email_active, sms_active, line_active, updated_at)
+	VALUES ($1, $2, $3, $4, now())
 	ON CONFLICT (user_id) 
 	DO UPDATE SET 
     	email_active = EXCLUDED.email_active,
     	sms_active = EXCLUDED.sms_active,
+    	line_active = EXCLUDED.line_active,
     	updated_at = now();
 	`
 
-	rows, err := r.db(ctx).Exec(ctx, query, userNotif.UserId, userNotif.EmailActive, userNotif.SmsActive)
+	rows, err := r.db(ctx).Exec(ctx, query, userNotif.UserId, userNotif.EmailActive, userNotif.SmsActive, userNotif.LineActive)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
@@ -257,11 +261,13 @@ func (r *notificationRepo) GetActiveUsersNotif(ctx context.Context) ([]model.Use
 			un.user_id, 
 			u.email, 
 			u.tel,
+			u.line_user_token,
 			un.email_active, 
-			un.sms_active
+			un.sms_active,
+			un.line_active
 		FROM user_notification un
 		INNER JOIN "user" u ON un.user_id = u.user_id
-		WHERE un.email_active = TRUE OR un.sms_active = TRUE;
+		WHERE un.email_active = TRUE OR un.sms_active = TRUE OR un.line_active = TRUE;
 	`
 
 	rows, err := r.db(ctx).Query(ctx, query)

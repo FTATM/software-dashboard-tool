@@ -7,7 +7,10 @@ import 'vue3-toastify/dist/index.css';
 import { createPinia } from 'pinia';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { i18n } from './i18n'
+import { addCollection } from '@iconify/vue'
+import lucideData from '@iconify-json/lucide/icons.json'
 
+addCollection(lucideData)
 const app = createApp(App);
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);

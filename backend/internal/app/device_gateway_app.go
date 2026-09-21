@@ -123,6 +123,10 @@ func InitializeDeviceGateway(ctx context.Context) (App, error) {
 	gatewayRepo := repo.NewDeviceGatewayRepository(db)
 	notificationRepo := repo.NewNotificationRepository(db)
 	auditLogRepo := repo.NewAuditLogRepository(db)
+	lineClient := client.NewLineClient(config.Line{
+		LineChannelID:      GetEnvOrDefault("LINE_CHANNEL_ID", ""),
+		ChannelAccessToken: GetEnvOrDefault("LINE_CHANNEL_ACCESS_TOKEN", ""),
+	})
 
 	notificationClient := client.NewNotificationClient(
 		config.Sms{
@@ -138,9 +142,7 @@ func InitializeDeviceGateway(ctx context.Context) (App, error) {
 			Username:   GetEnvOrDefault("MAIL_USERNAME", ""),
 			Password:   GetEnvOrDefault("MAIL_PASSWORD", ""),
 		},
-		config.Line{
-			Token: GetEnvOrDefault("LINE_NOTIFY_TOKEN", ""),
-		},
+		lineClient,
 	)
 
 	cacheService := service.NewCacheService(gatewayRepo)

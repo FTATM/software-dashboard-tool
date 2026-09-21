@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/smtp"
 	"strings"
@@ -17,19 +18,19 @@ import (
 type notificationClient struct {
 	sms         config.Sms
 	email       config.Email
-	line        config.Line
+	lineClient  model.LineClient
 	httpClient  *http.Client
 	prefixError string
 }
 
-func NewNotificationClient(sms config.Sms, email config.Email, line config.Line) model.NotificationClient {
+func NewNotificationClient(sms config.Sms, email config.Email, lineClient model.LineClient) model.NotificationClient {
 	return &notificationClient{
 		sms:   sms,
 		email: email,
-		line:  line,
 		httpClient: &http.Client{
 			Timeout: 3 * time.Second,
 		},
+		lineClient:  lineClient,
 		prefixError: "notificationClient",
 	}
 }
@@ -116,6 +117,40 @@ func (n *notificationClient) SendEmail(ctx context.Context, emailUsers []model.U
 		if err != nil {
 			// Return the error to be logged by the service
 			return fmt.Errorf("[%s]>[%s] failed to send email to %s: %w", n.prefixError, fname, u.Email, err)
+		}
+	}
+
+	return nil
+}
+
+func (n *notificationClient) SendLine(ctx context.Context, lineUsers []model.UserNotificationSend) error {
+	const fname = "SendLine"
+
+	for _, u := range lineUsers {
+		// Respect context cancellation (timeout or caller cancellation)
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("[%s]>[%s]: %w", n.prefixError, fname, err)
+		}
+
+		if u.LineUserToken == nil {
+			slog.DebugContext(ctx, "User has no line token for send notify")
+			continue
+		}
+
+		// Skip users without a linked LINE account
+		lineUserToken := strings.TrimSpace(*u.LineUserToken)
+		if lineUserToken == "" {
+			continue
+		}
+
+		// Skip empty messages
+		if strings.TrimSpace(u.Msg) == "" {
+			continue
+		}
+
+		// Send push message via LineClient
+		if err := n.lineClient.SendPushMessage(lineUserToken, u.Msg); err != nil {
+			return fmt.Errorf("[%s]>[%s] failed to send LINE message to user token %s: %w", n.prefixError, fname, lineUserToken, err)
 		}
 	}
 

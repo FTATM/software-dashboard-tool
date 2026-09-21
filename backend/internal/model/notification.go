@@ -37,4 +37,5 @@ type NotificationService interface {
 type NotificationClient interface {
 	SendSms(ctx context.Context, smsUser []UserNotificationSend) error
 	SendEmail(ctx context.Context, emailUsers []UserNotificationSend) error
+	SendLine(ctx context.Context, lineUser []UserNotificationSend) error
 }

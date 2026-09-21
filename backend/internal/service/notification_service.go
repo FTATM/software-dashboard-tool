@@ -36,9 +36,18 @@ func NewNotificationService(txManager model.TransactionManager, repo model.Notif
 func (s *notificationService) GetUserNotifAllDetail(ctx context.Context) ([]model.UserNotificationDetail, error) {
 	const fname = "GetAllDetail"
 	userNotif, err := s.notifRepo.GetUserNotifAllDetail(ctx)
+	for _, u := range userNotif {
+		var truncatedToken *string
+		if u.LineUserToken != nil {
+			t := (*u.LineUserToken)[:min(len(*u.LineUserToken), 10)]
+			truncatedToken = &t
+		}
+		u.LineUserToken = truncatedToken
+	}
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
+
 	return userNotif, nil
 }
 
@@ -49,6 +58,7 @@ func (s *notificationService) UpsertUserNotif(ctx context.Context, update model.
 		UserId:      update.UserId,
 		SmsActive:   update.SmsActive,
 		EmailActive: update.EmailActive,
+		LineActive:  update.LineActive,
 	}
 
 	tx, err := s.txManager.Begin(ctx)
@@ -305,21 +315,21 @@ func (s *notificationService) checkCondition(currentValue float64, operator stri
 func (s *notificationService) dispatchGroupedNotif(ctx context.Context, users []model.UserNotificationSend, rule model.DeviceRuleNotification, data model.DeviceData) {
 	var smsUsers []model.UserNotificationSend
 	var emailUsers []model.UserNotificationSend
+	var lineUsers []model.UserNotificationSend
 
-	// 1. แปลงค่ากลับไปเป็นทศนิยมตามจริง (หารด้วย 1000)
 	realValue := float64(data.ValueData) / float64(model.DeviceScale)
 
 	// 2. Loop through users and group them by their active flags
 	for _, u := range users {
 
-		// 1. SMS: Ultra-compact hybrid format to avoid multi-part SMS billing
+		// SMS
 		if u.SmsActive {
 			// Example output: "Alert/เตือน: Voltage-A=220.50. High Volt"
 			u.Msg = fmt.Sprintf("Alert/เตือน: %s=%.2f. %s", data.DeviceName, realValue, rule.Reason)
 			smsUsers = append(smsUsers, u)
 		}
 
-		// 2. Email: Full bilingual support with clear formatting
+		// Email
 		if u.EmailActive {
 			emailTemplate := "⚠️ แจ้งเตือนความผิดปกติ (System Alert)\n" +
 				"อุปกรณ์ (Device): %s\n" +
@@ -337,6 +347,12 @@ func (s *notificationService) dispatchGroupedNotif(ctx context.Context, users []
 			)
 			emailUsers = append(emailUsers, u)
 		}
+
+		// Line
+		if u.LineActive {
+			u.Msg = fmt.Sprintf("Alert/เตือน: %s=%.2f. %s", data.DeviceName, realValue, rule.Reason)
+			lineUsers = append(lineUsers, u)
+		}
 	}
 
 	// 3. Dispatch to the specific clients
@@ -349,6 +365,12 @@ func (s *notificationService) dispatchGroupedNotif(ctx context.Context, users []
 	if len(emailUsers) > 0 {
 		if err := s.notifClient.SendEmail(ctx, emailUsers); err != nil {
 			slog.Error("Failed to dispatch Email batch", slog.String("error", err.Error()))
+		}
+	}
+
+	if len(lineUsers) > 0 {
+		if err := s.notifClient.SendLine(ctx, lineUsers); err != nil {
+			slog.Error("Failed to dispatch Line batch", slog.String("error", err.Error()))
 		}
 	}
 }

@@ -204,6 +204,13 @@
     "accountStatus": "สถานะบัญชี",
     "accountStatusDesc": "อนุญาตให้ผู้ใช้นี้เข้าสู่ระบบและใช้งานระบบได้",
     "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้ \"{name}\" อย่างถาวร? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "lineToken": "LINE TOKEN",
+    "connectLine": "เชื่อมต่อ LINE",
+    "lineQrTitle": "เพิ่มเพื่อน LINE บอท",
+    "lineQrSubtitle": "สแกนด้วยกล้องในแอป LINE เพื่อเพิ่มเพื่อนบัญชีทางการและเชื่อมต่อโปรไฟล์นี้",
+    "lineOfficialAccount": "บัญชีทางการ:",
+    "openDirectlyInLine": "เปิดในแอป LINE โดยตรง",
+    "noLineConfig": "บอท LINE ไม่ได้ตั้งไว้",
     "validation": {
       "firstNameRequired": "กรุณาระบุชื่อ",
       "lastNameRequired": "กรุณาระบุนามสกุล",
@@ -214,6 +221,21 @@
       "passwordMin": "รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร",
       "roleRequired": "กรุณาเลือกตำแหน่ง"
     }
+  },
+  "lineRegister": {
+    "appOnlyTitle": "เข้าใช้งานผ่านแอป LINE เท่านั้น",
+    "appOnlyDesc": "ลิงก์นี้สามารถเข้าถึงได้ผ่านแอปพลิเคชัน LINE เท่านั้น",
+    "connecting": "กำลังเชื่อมต่อกับ LINE...",
+    "title": "เชื่อมต่อบัญชี LINE",
+    "subtitle": "เชื่อมโยงบัญชีผู้ใช้งานของคุณเข้ากับ LINE",
+    "profileLabel": "โปรไฟล์ LINE",
+    "username": "ชื่อผู้ใช้ / อีเมล",
+    "usernamePlaceholder": "กรอกชื่อผู้ใช้งานของคุณ",
+    "password": "รหัสผ่าน",
+    "passwordPlaceholder": "••••••••",
+    "signInAndLink": "เข้าสู่ระบบและเชื่อมต่อ",
+    "sessionExpired": "เซสชัน LINE ไม่ถูกต้องหรือหมดอายุ กรุณาเปิดลิงก์ใหม่อีกครั้ง",
+    "linkSuccess": "เชื่อมต่อบัญชีสำเร็จแล้ว!"
   },
   "deviceGroup": {
     "title": "การจัดการกลุ่มอุปกรณ์",
@@ -344,6 +366,8 @@
     "missingPhone": "ไม่มีข้อมูลเบอร์โทรศัพท์ในโปรไฟล์",
     "emailAlertsDesc": "รับการแจ้งเตือนและข่าวสารของระบบผ่านอีเมล",
     "smsAlertsDesc": "รับการแจ้งเตือนเหตุขัดข้องเร่งด่วนผ่านข้อความ SMS",
+    "lineAlerts": "การแจ้งเตือนผ่าน LINE",
+    "lineAlertsDesc": "ส่งการแจ้งเตือนผ่านระบบ LINE OA",
     "messages": {
       "loadFailed": "ไม่สามารถโหลดข้อมูลการตั้งค่าการแจ้งเตือนได้",
       "updateSuccess": "อัปเดตการตั้งค่าการแจ้งเตือนสำเร็จ!",
@@ -509,7 +533,7 @@
     "height": "ความสูง",
     "saveSettings": "บันทึกการตั้งค่า",
     "newWidget": "{type} ใหม่",
-    "noCanvas":"ไม่มีแคนวาส",
+    "noCanvas": "ไม่มีแคนวาส",
     "widgets": {
       "barChart": "กราฟแท่ง",
       "rowChart": "กราฟแท่งแนวนอน",

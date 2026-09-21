@@ -42,6 +42,7 @@ func SetupApi(handlers RouterHandlers) *http.ServeMux {
 	userMux.HandleFunc("POST /logout", handlers.User.Logout)
 	userMux.HandleFunc("GET /getalldetail", handlers.User.GetAllDetail)
 	userMux.HandleFunc("GET /permission", handlers.User.Permission)
+	userMux.HandleFunc("POST /linkline", handlers.User.LinkLine)
 
 	deviceMux := http.NewServeMux()
 	mux.Handle("/device/", http.StripPrefix("/device", deviceMux))

@@ -17,10 +17,11 @@ type UserHandler struct {
 	service     model.UserService
 	roleService model.RoleService
 	httpsConfig bool
+	lineClient  model.LineClient
 }
 
-func NewUserHandler(service model.UserService, roleService model.RoleService, httpsConfig bool) *UserHandler {
-	return &UserHandler{service: service, roleService: roleService}
+func NewUserHandler(service model.UserService, roleService model.RoleService, httpsConfig bool, lineClient model.LineClient) *UserHandler {
+	return &UserHandler{service: service, roleService: roleService, lineClient: lineClient}
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -39,8 +40,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, tokenString, err := h.service.LoginUserJwt(r.Context(), &creds, issueTime, expTime, clientInfo)
 	if err != nil {
 		var code int
-		if errors.Is(err, pgx.ErrNoRows) {
-			res.Message = "t_invalid_user_password"
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, model.ErrInvalidLogin) {
+			res.Message = model.ErrInvalidLogin.Error()
 			code = http.StatusBadRequest
 		} else if errors.Is(err, model.ErrNotActive) {
 			res.Message = model.ErrNotActive.Error()
@@ -308,6 +309,50 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			slog.String("track", err.Error()),
 		)
 		respondJson(w, http.StatusInternalServerError, &res)
+		return
+	}
+
+	respondJson(w, http.StatusOK, &res)
+}
+
+func (h *UserHandler) LinkLine(w http.ResponseWriter, r *http.Request) {
+	var res Response
+	var linkLine model.UserLinkLine
+	var err error
+
+	if err = json.NewDecoder(r.Body).Decode(&linkLine); err != nil {
+		res.Message = model.ErrInvalidBody.Error()
+		respondJson(w, http.StatusBadRequest, &res)
+		return
+	}
+	userSub, err := h.lineClient.VerifyIDToken(linkLine.IdToken)
+	if err != nil {
+		res.Message = "Error"
+		slog.ErrorContext(r.Context(), res.Message,
+			slog.String("track", err.Error()),
+		)
+		respondJson(w, http.StatusInternalServerError, &res)
+		return
+	}
+	linkLine.LineUserToken = userSub
+
+	err = h.service.UserLinkLineUserToken(r.Context(), linkLine, 0)
+	if err != nil {
+		var code int
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, model.ErrInvalidLogin) {
+			res.Message = model.ErrInvalidLogin.Error()
+			code = http.StatusBadRequest
+		} else if errors.Is(err, model.ErrNotActive) {
+			res.Message = model.ErrNotActive.Error()
+			code = http.StatusBadRequest
+		} else {
+			res.Message = "Error"
+			code = http.StatusInternalServerError
+			slog.ErrorContext(r.Context(), res.Message,
+				slog.String("track", err.Error()),
+			)
+		}
+		respondJson(w, code, &res)
 		return
 	}
 

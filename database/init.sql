@@ -39,21 +39,30 @@ CREATE TABLE IF NOT EXISTS "user" (
     role_id INT,
     email TEXT,
     tel TEXT,
+    line_user_token TEXT NULL,
     CONSTRAINT pk_user PRIMARY KEY (user_id),
     CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES role(role_id) ON DELETE SET NULL
 );
-CREATE INDEX IF NOT EXISTS ix_user_active_username ON "user" (username) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_active_username
+ON "user" (username)
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_line_user_token_active
+ON "user" (line_user_token)
+WHERE deleted_at IS NULL AND line_user_token IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS user_notification (
     user_id INT,
     email_active BOOLEAN NOT NULL DEFAULT FALSE,
     sms_active BOOLEAN NOT NULL DEFAULT FALSE,
+    line_active BOOLEAN NOT NULL DEFAULT FALSE,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT pk_user_notif PRIMARY KEY (user_id),
     CONSTRAINT fk_user_notifi_user FOREIGN KEY (user_id) REFERENCES "user" (user_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS ix_user_notif_email ON user_notification (email_active) WHERE email_active = TRUE;
 CREATE INDEX IF NOT EXISTS ix_user_notif_sms ON user_notification (sms_active) WHERE sms_active = TRUE;
+CREATE INDEX IF NOT EXISTS ix_user_notif_line ON user_notification (line_active) WHERE line_active = TRUE;
 
 CREATE TABLE IF NOT EXISTS menu (
     menu_id SERIAL,

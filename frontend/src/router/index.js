@@ -12,6 +12,7 @@ import CanvasDesignView from '@/views/canvasManagement/CanvasDesignView.vue';
 import CanvasAccessView from '@/views/canvasManagement/CanvasAccessView.vue';
 import NotifUserView from '@/views/notification/NotifUserView.vue';
 import NotifDeviceRuleView from '@/views/notification/NotifDeviceRuleView.vue';
+import LineRegisterView from '@/views/line/LineRegisterView.vue';
 import { useFetch } from '@/composables/useFetch';
 import { toast } from 'vue3-toastify';
 import { usePermissionStore } from '@/stores/usePermissionStore';
@@ -114,6 +115,15 @@ const router = createRouter({
           component: NotifDeviceRuleView,
         }
       ]
+    },
+    {
+      path: '/liff/register',
+      name: 'lineRegister',
+      component: LineRegisterView,
+      meta: {
+        hideLayout: true,  // Bypasses MainLayout sidebar and navbar
+        isLiffOnly: true   // Custom flag to guard against desktop web browsers
+      }
     }
   ]
 });
@@ -137,17 +147,17 @@ router.beforeEach(async (to, from) => {
     const permissionStore = usePermissionStore();
     const {
       data: userPermissionData,
-      error: userPermissionError, 
-      res: userPermissionRes, 
-      execute: userPermissionApi 
+      error: userPermissionError,
+      res: userPermissionRes,
+      execute: userPermissionApi
     } = useFetch();
 
     // Fetches on every route change; backend serves from cache
-    await userPermissionApi('/user/permission'); 
+    await userPermissionApi('/user/permission');
 
     // Case 1: Permissions retrieved successfully
-    if (!userPermissionError.value && userPermissionData.value?.data) { 
-      permissionStore.setPermissions(userPermissionData.value.data); 
+    if (!userPermissionError.value && userPermissionData.value?.data) {
+      permissionStore.setPermissions(userPermissionData.value.data);
       return true;
     }
 

@@ -23,7 +23,6 @@ type DeviceHandler struct {
 	service             model.DeviceService
 	roleService         model.RoleService
 	deviceGatewayClient model.DeviceGatewayClient
-	notifClient         model.NotificationClient
 	auditLogRepo        model.AuditLogRepository
 }
 
@@ -35,7 +34,7 @@ type ImportRow struct {
 	Message    string `json:"message"`
 }
 
-func NewDeviceHandler(service model.DeviceService, rs model.RoleService, deviceGatewayClient model.DeviceGatewayClient, notifClient model.NotificationClient, auditLogRepo model.AuditLogRepository) *DeviceHandler {
+func NewDeviceHandler(service model.DeviceService, rs model.RoleService, deviceGatewayClient model.DeviceGatewayClient, auditLogRepo model.AuditLogRepository) *DeviceHandler {
 	return &DeviceHandler{service: service, roleService: rs, deviceGatewayClient: deviceGatewayClient, auditLogRepo: auditLogRepo}
 }
 

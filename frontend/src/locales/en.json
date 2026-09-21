@@ -204,6 +204,13 @@
     "accountStatus": "Account Status",
     "accountStatusDesc": "Allow this user to log in and access the system.",
     "deleteWarning": "Are you sure you  to permanently delete the user \"{name}\"? This action cannot be undone.",
+    "lineToken": "LINE Token",
+    "connectLine": "Connect LINE",
+    "lineQrTitle": "Add LINE Bot",
+    "lineQrSubtitle": "Scan using the LINE app camera to add our Official Account and link this profile.",
+    "lineOfficialAccount": "Official Account:",
+    "openDirectlyInLine": "Open Directly in LINE",
+    "noLineConfig": "Bot LINE is not configured.",
     "validation": {
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required",
@@ -214,6 +221,21 @@
       "passwordMin": "Password must be at least 6 characters",
       "roleRequired": "Selecting a role is required"
     }
+  },
+  "lineRegister": {
+    "appOnlyTitle": "LINE App Only",
+    "appOnlyDesc": "This link can only be accessed through the official LINE application.",
+    "connecting": "Connecting to LINE...",
+    "title": "Link LINE Account",
+    "subtitle": "Connect your platform credentials with LINE",
+    "profileLabel": "LINE Profile",
+    "username": "Username / Email",
+    "usernamePlaceholder": "Enter your registered username",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "signInAndLink": "Sign In & Link",
+    "sessionExpired": "LINE session invalid or expired. Please re-open the link.",
+    "linkSuccess": "Account successfully linked!"
   },
   "deviceGroup": {
     "title": "Device Group Management",
@@ -344,6 +366,8 @@
     "missingPhone": "Missing Phone on Profile",
     "emailAlertsDesc": "Receive system alerts and updates via email.",
     "smsAlertsDesc": "Receive urgent incident notifications via text message.",
+    "lineAlerts": "LINE Alerts",
+    "lineAlertsDesc": "Send notifications via LINE OA",
     "messages": {
       "loadFailed": "Failed to load notification assignments",
       "updateSuccess": "Notification preferences updated successfully!",

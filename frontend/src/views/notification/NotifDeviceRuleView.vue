@@ -28,8 +28,14 @@
           <span class="font-medium text-base-content/50">{{ value }}</span>
         </template>
 
+        <!-- ⚡ Dynamic device name lookup matching SchedulerView -->
         <template #cell-deviceName="{ row }">
-          <span class="font-bold text-primary">{{ row.deviceName }}</span>
+          <span :class="[
+            'font-bold',
+            isUnknownDevice(row.deviceId) ? 'text-base-content/50 italic font-medium' : 'text-primary'
+          ]">
+            {{ getDeviceName(row.deviceId) }}
+          </span>
         </template>
 
         <template #cell-reason="{ value }">
@@ -86,15 +92,9 @@
               <span class="label-text font-semibold">{{ $t('notifDevice.targetDevice') }}</span>
               <span class="label-text-alt text-error">*</span>
             </div>
-            <SearchableDropdown
-              v-model="form.deviceId"
-              :options="realDeviceList"
-              labelKey="deviceName"
-              valueKey="deviceId"
-              :placeholder="$t('common.searchDevice')"
-              :error="v$.deviceId.$error"
-              @blur="v$.deviceId.$touch()"
-            />
+            <SearchableDropdown v-model="form.deviceId" :options="realDeviceList" labelKey="deviceName"
+              valueKey="deviceId" :placeholder="$t('common.searchDevice')" :error="v$.deviceId.$error"
+              @blur="v$.deviceId.$touch()" />
             <div class="label px-1 py-1 h-6">
               <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium">
                 {{ v$.deviceId.$errors[0].$message }}
@@ -104,7 +104,8 @@
 
           <div class="grid grid-cols-2 gap-4">
             <label class="form-control w-full">
-              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('notifDevice.condition') }}</span></div>
+              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('notifDevice.condition') }}</span>
+              </div>
               <select v-model="form.condition" @blur="v$.condition.$touch()"
                 class="select select-bordered w-full font-mono text-lg font-bold">
                 <option value=">">&gt;</option>
@@ -175,7 +176,7 @@
           <Icon icon="lucide:alert-triangle" class="w-6 h-6" /> {{ $t('common.confirmDelete') }}
         </h3>
         <p class="py-4 text-base-content/80">
-          {{ $t('notifDevice.deleteWarning', { name: ruleToDelete?.deviceName }) }}
+          {{ $t('notifDevice.deleteWarning', { name: ruleToDelete ? getDeviceName(ruleToDelete.deviceId) : '' }) }}
         </p>
         <div class="modal-action">
           <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
@@ -209,7 +210,7 @@ import TableData from '@/components/TableData.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const mainMenuName = 'Notification Device';
 
 const permissionStore = usePermissionStore();
@@ -229,14 +230,58 @@ const ruleToDelete = ref(null);
 const ruleTableData = ref([]);
 const deviceList = ref([]);
 
-// ⚡ Filter out virtual sensors: only physical sensors can have alert rules
+// ⚡ Check device active & soft-delete status
+const isDeviceActive = (device) => {
+  if (!device) return false;
+  if (device.isDeleted || device.deleted || device.isDelete) return false;
+  if (device.active === false || device.isActive === false) return false;
+  if (typeof device.status === 'string' && device.status.toLowerCase() === 'inactive') return false;
+  return true;
+};
+
+// ⚡ Check if device ID is missing, soft-deleted, or inactive
+const isUnknownDevice = (deviceId) => {
+  if (!deviceId) return true;
+  const device = deviceList.value.find(d => d.deviceId === deviceId);
+  return !device || !isDeviceActive(device);
+};
+
+// ⚡ Translation resolver with fallback to scheduler key
+const getUnknownDeviceText = () => {
+  if (te && te('notifDevice.unknownDevice')) return t('notifDevice.unknownDevice');
+  if (te && te('common.unknownDevice')) return t('common.unknownDevice');
+  return t('scheduler.unknownDevice');
+};
+
+// ⚡ Resolve device name like SchedulerView does
+const getDeviceName = (deviceId) => {
+  if (!deviceId) return getUnknownDeviceText();
+  const device = deviceList.value.find(d => d.deviceId === deviceId);
+  if (device && isDeviceActive(device)) {
+    return device.deviceName;
+  }
+  return getUnknownDeviceText();
+};
+
+// ⚡ Filter out virtual sensors and inactive/deleted devices; retain current selection if editing
 const realDeviceList = computed(() => {
-  return deviceList.value.filter(d => !d.refDeviceId);
+  const activePhysicalList = deviceList.value.filter(d => !d.refDeviceId && isDeviceActive(d));
+  if (isEditing.value && form.value.deviceId && !activePhysicalList.some(d => d.deviceId === form.value.deviceId)) {
+    return [
+      { deviceId: form.value.deviceId, deviceName: getDeviceName(form.value.deviceId) },
+      ...activePhysicalList
+    ];
+  }
+  return activePhysicalList;
 });
 
 const tableColumns = computed(() => [
   { header: t('common.id'), accessorKey: 'ruleId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
-  { header: t('common.device'), accessorKey: 'deviceName' },
+  {
+    header: t('common.device'),
+    id: 'deviceName',
+    accessorFn: (row) => getDeviceName(row.deviceId)
+  },
   { header: t('notifDevice.alertMessage'), accessorKey: 'reason' },
   { header: t('notifDevice.logicCondition'), id: 'logic', enableSorting: false },
   { header: t('common.status'), accessorKey: 'active' },

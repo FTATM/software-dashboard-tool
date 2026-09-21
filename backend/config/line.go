@@ -1,5 +1,6 @@
 package config
 
 type Line struct {
-	Token string
+	LineChannelID      string
+	ChannelAccessToken string
 }

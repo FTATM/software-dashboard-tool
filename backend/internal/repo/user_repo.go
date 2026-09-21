@@ -68,7 +68,8 @@ func (r *userRepo) GetAll(ctx context.Context, active bool) ([]model.User, error
 			active, 
 			role_id,
 			email,
-			tel
+			tel,
+			line_user_token
 		FROM "user" 
 		WHERE ($1 = false) OR ($1 = true AND deleted_at IS NULL)
 		`
@@ -220,4 +221,26 @@ func (r *userRepo) GetUserForPermissionById(ctx context.Context, userId int) (*m
 		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
 	return &user, nil
+}
+
+func (r *userRepo) UpdateLineUserToken(ctx context.Context, userId int, lineUserToken string) error {
+	const fname = "Delete"
+	query := `
+			UPDATE "user"
+			SET 
+				line_user_token = $2
+			WHERE user_id = $1
+		`
+	result, err := r.db(ctx).Exec(ctx, query, userId, lineUserToken)
+
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	if result.RowsAffected() != 1 {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, pgx.ErrNoRows)
+	}
+
+	return nil
+
 }

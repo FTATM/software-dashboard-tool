@@ -13,7 +13,7 @@ func AuthApi(jwtKey []byte, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Public route
-		if r.URL.Path == "/user/login" || r.URL.Path == "/ping" {
+		if r.URL.Path == "/user/login" || r.URL.Path == "/ping" || r.URL.Path == "/user/linkline" {
 			next.ServeHTTP(w, r)
 			return
 		}
