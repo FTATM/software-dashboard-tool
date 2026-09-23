@@ -108,6 +108,8 @@
     "today": "Today",
     "current": "Current",
     "deleteWarning": "Are you sure you want to remove",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
     "timeRanges": {
       "live": "Live Data Only",
       "m15": "Last 15 Minutes",
@@ -179,8 +181,6 @@
     "createRole": "Create New Role",
     "roleNamePlaceholder": "e.g., Administrator, Manager, Viewer",
     "permissions": "Role Permissions",
-    "selectAll": "Select All",
-    "deselectAll": "Deselect All",
     "deleteWarning": "Are you sure you  to permanently delete the role \"{name}\"? This action cannot be undone. If it is currently in use, it cannot be deleted",
     "validation": {
       "roleNameRequired": "Role name is required"
@@ -211,6 +211,7 @@
     "lineOfficialAccount": "Official Account:",
     "openDirectlyInLine": "Open Directly in LINE",
     "noLineConfig": "Bot LINE is not configured.",
+    "unlinkLine": "Unlink LINE",
     "validation": {
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required",

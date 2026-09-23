@@ -108,6 +108,8 @@
     "today": "วันนี้",
     "current": "ตอนนี้",
     "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบ",
+    "selectAll": "เลือกทั้งหมด",
+    "deselectAll": "ยกเลิกการเลือกทั้งหมด",
     "timeRanges": {
       "live": "ข้อมูลสดเท่านั้น",
       "m15": "15 นาทีที่ผ่านมา",
@@ -179,8 +181,6 @@
     "createRole": "สร้างตำแหน่งใหม่",
     "roleNamePlaceholder": "เช่น Administrator, Manager, Viewer",
     "permissions": "สิทธิ์ของตำแหน่ง",
-    "selectAll": "เลือกทั้งหมด",
-    "deselectAll": "ยกเลิกการเลือกทั้งหมด",
     "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบตำแหน่ง \"{name}\" อย่างถาวร? การกระทำนี้ไม่สามารถย้อนกลับได้ หากมีการใช้งานอยู่จะไม่สามารถลบได้",
     "validation": {
       "roleNameRequired": "กรุณาระบุชื่อตำแหน่ง"
@@ -211,6 +211,7 @@
     "lineOfficialAccount": "บัญชีทางการ:",
     "openDirectlyInLine": "เปิดในแอป LINE โดยตรง",
     "noLineConfig": "บอท LINE ไม่ได้ตั้งไว้",
+    "unlinkLine": "ยกเลิกเชื่อมต่อ LINE",
     "validation": {
       "firstNameRequired": "กรุณาระบุชื่อ",
       "lastNameRequired": "กรุณาระบุนามสกุล",

@@ -36,13 +36,11 @@ func NewNotificationService(txManager model.TransactionManager, repo model.Notif
 func (s *notificationService) GetUserNotifAllDetail(ctx context.Context) ([]model.UserNotificationDetail, error) {
 	const fname = "GetAllDetail"
 	userNotif, err := s.notifRepo.GetUserNotifAllDetail(ctx)
-	for _, u := range userNotif {
-		var truncatedToken *string
-		if u.LineUserToken != nil {
-			t := (*u.LineUserToken)[:min(len(*u.LineUserToken), 10)]
-			truncatedToken = &t
+	for i := range userNotif {
+		if userNotif[i].LineUserToken != nil {
+			t := (*userNotif[i].LineUserToken)[:min(len(*userNotif[i].LineUserToken), 10)]
+			userNotif[i].LineUserToken = &t
 		}
-		u.LineUserToken = truncatedToken
 	}
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)

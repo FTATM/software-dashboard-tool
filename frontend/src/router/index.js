@@ -24,8 +24,6 @@ import { useUserStore } from '@/stores/useUserStore';
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // redirect any unknown routes to dashboard (or login)
-    { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
     {
       path: '/login',
       component: LoginView,
@@ -124,12 +122,19 @@ const router = createRouter({
         hideLayout: true,  // Bypasses MainLayout sidebar and navbar
         isLiffOnly: true   // Custom flag to guard against desktop web browsers
       }
-    }
+    },
+    // redirect any unknown routes to dashboard (or login)
+    //! need to be buttom of routes for prevent false redirected before other route access
+    { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
   ]
 });
 
 // GLOBAL ROUTE GUARD
 router.beforeEach(async (to, from) => {
+  if (to.meta.isLiffOnly || to.path.startsWith('/liff')) {
+    return true;
+  }
+
   const userStore = useUserStore();
   const isLoggedIn = !!userStore.user?.id;
 
@@ -180,6 +185,10 @@ router.beforeEach(async (to, from) => {
   }
 
   return true;
+});
+
+router.onError((error) => {
+  console.error('[Vue Router Error]:', error);
 });
 
 export default router;

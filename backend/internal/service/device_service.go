@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/FTATM/software-dashboard-tool/internal/model"
+	"github.com/jackc/pgx/v5"
 )
 
 type deviceService struct {
@@ -328,6 +330,12 @@ func (s *deviceService) StartPublic(ctx context.Context) {
 			for deviceId := range activeDeviceIds {
 				chartDeviceData, err := s.deviceRepo.GetByIdChartDeviceData(ctx, deviceId)
 				if err != nil {
+					if errors.Is(err, pgx.ErrNoRows) {
+						slog.Debug("No Found to fetch chart data for device",
+							slog.Int("deviceId", deviceId),
+							slog.String("error", err.Error()))
+						continue
+					}
 					slog.Error("Failed to fetch chart data for device",
 						slog.Int("deviceId", deviceId),
 						slog.String("error", err.Error()))
@@ -397,7 +405,7 @@ func (s *deviceService) GetAllDeviceName(ctx context.Context) ([]model.DeviceDet
 	return deviceDetails, nil
 }
 
-func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, maxPoints int, fromTime, toTime time.Time) (map[int][][2]float64, error) {
+func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, maxPoints int, fromTime, toTime time.Time) (map[int]model.ChartHistoryData, error) {
 	const fname = "GetChartHistory"
 
 	// 1. Fetch metadata for requested devices to check for virtual sensors
@@ -448,7 +456,7 @@ func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, ma
 	}
 
 	// 3. Map logs back to the requested device IDs and apply EU scaling
-	historyData := make(map[int][][2]float64)
+	historyData := make(map[int]model.ChartHistoryData)
 	for _, reqId := range deviceIds {
 		meta, ok := deviceMeta[reqId]
 		if !ok {
@@ -461,6 +469,7 @@ func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, ma
 		}
 
 		sourceLogs := logsByPhysicalId[sourceId]
+		points := make([][2]float64, 0, len(sourceLogs))
 		for _, log := range sourceLogs {
 			tsMillis := float64(log.ReceivedAt.UnixMilli())
 			rawVal := float64(log.ValueData) / float64(model.DeviceScale)
@@ -469,7 +478,12 @@ func (s *deviceService) GetChartHistory(ctx context.Context, deviceIds []int, ma
 			euVal := model.Remap(rawVal, meta.RawMin, meta.RawMax, meta.EuMin, meta.EuMax)
 			valData := math.Round(euVal*1000) / 1000
 
-			historyData[reqId] = append(historyData[reqId], [2]float64{tsMillis, valData})
+			points = append(points, [2]float64{tsMillis, valData})
+		}
+
+		historyData[reqId] = model.ChartHistoryData{
+			DeviceName: meta.DeviceName,
+			Data:       points,
 		}
 	}
 

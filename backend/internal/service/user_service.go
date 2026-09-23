@@ -111,14 +111,15 @@ func (s *userService) UpdateUser(ctx context.Context, updateUser *model.UpdateUs
 	}
 
 	user := model.User{
-		UserId:       updateUser.UserId,
-		FirstName:    updateUser.FirstName,
-		LastName:     updateUser.LastName,
-		Active:       updateUser.Active,
-		PasswordHash: hash,
-		RoleId:       updateUser.RoleId,
-		Email:        updateUser.Email,
-		Tel:          updateUser.Tel,
+		UserId:        updateUser.UserId,
+		FirstName:     updateUser.FirstName,
+		LastName:      updateUser.LastName,
+		Active:        updateUser.Active,
+		PasswordHash:  hash,
+		RoleId:        updateUser.RoleId,
+		Email:         updateUser.Email,
+		Tel:           updateUser.Tel,
+		LineUserToken: updateUser.LineUserToken,
 	}
 
 	countValidate, err := s.userRepo.CountValidate(ctx, &user)
@@ -384,7 +385,7 @@ func (s *userService) DeleteUser(ctx context.Context, deleteUserId, authUserId i
 }
 
 func (s *userService) UserLinkLineUserToken(ctx context.Context, linkLine model.UserLinkLine, authUserId int) error {
-	const fname = "UserLinkLineToken"
+	const fname = "UserLinkLineUserToken"
 	var err error
 
 	if len(linkLine.LineUserToken) == 0 || len(linkLine.Username) == 0 || len(linkLine.Password) == 0 {

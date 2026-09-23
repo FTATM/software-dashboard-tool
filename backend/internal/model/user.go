@@ -34,7 +34,20 @@ func (s *User) IsSame(req User) bool {
 		s.RoleId == req.RoleId &&
 		s.Email == req.Email &&
 		s.Tel == req.Tel &&
-		s.Active == req.Active
+		s.Active == req.Active &&
+		s.isSameLineUserToken(req.LineUserToken)
+}
+
+func (s *User) isSameLineUserToken(reqToken *string) bool {
+	if s.LineUserToken == nil && reqToken == nil {
+		return true
+	}
+	if s.LineUserToken == nil || reqToken == nil {
+		return false
+	}
+
+	truncatedOld := (*s.LineUserToken)[:min(len(*s.LineUserToken), 10)]
+	return *reqToken == *s.LineUserToken || *reqToken == truncatedOld
 }
 
 type UserDetail struct {
@@ -66,14 +79,15 @@ type CreateUser struct {
 }
 
 type UpdateUser struct {
-	UserId    int    `json:"userId"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	Password  string `json:"password,omitempty"`
-	Active    bool   `json:"active"`
-	RoleId    int    `json:"roleId"`
-	Email     string `json:"email"`
-	Tel       string `json:"tel"`
+	UserId        int     `json:"userId"`
+	FirstName     string  `json:"firstName"`
+	LastName      string  `json:"lastName"`
+	Password      string  `json:"password,omitempty"`
+	Active        bool    `json:"active"`
+	RoleId        int     `json:"roleId"`
+	Email         string  `json:"email"`
+	Tel           string  `json:"tel"`
+	LineUserToken *string `json:"lineUserToken"`
 }
 
 type UserLinkLine struct {

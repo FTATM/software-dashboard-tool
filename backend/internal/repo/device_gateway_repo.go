@@ -34,27 +34,39 @@ func (r *deviceGatewayRepo) BulkUpsertDeviceData(ctx context.Context, data []mod
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Batch update only active devices and RETURN the device_id if updated
+	// Deduplicate by DeviceId to find the latest point per device for table 'device'
+	latestPerDevice := make(map[int]model.DeviceData)
+	for _, d := range data {
+		existing, exists := latestPerDevice[d.DeviceId]
+		if !exists || d.ReceivedAt.After(existing.ReceivedAt) {
+			latestPerDevice[d.DeviceId] = d
+		}
+	}
+
+	// Update 'device' using d.ReceivedAt and ensure we don't overwrite newer data
 	batch := &pgx.Batch{}
 	updateQuery := `
 		UPDATE device 
-		SET value_data = $1, updated_value_at = now(), last_seen_at = now() 
-		WHERE device_id = $2 AND active = true AND deleted_at IS NULL
+		SET value_data = $1, updated_value_at = $2, last_seen_at = now() 
+		WHERE device_id = $3 
+		  AND active = true 
+		  AND deleted_at IS NULL 
+		  AND (updated_value_at IS NULL OR updated_value_at <= $2)
 		RETURNING device_id`
 
-	for _, d := range data {
-		batch.Queue(updateQuery, d.ValueData, d.DeviceId)
+	for _, d := range latestPerDevice {
+		batch.Queue(updateQuery, d.ValueData, d.ReceivedAt, d.DeviceId)
 	}
 
 	br := tx.SendBatch(ctx, batch)
 
-	// Track which device IDs were successfully updated (i.e. were active)
-	activeDeviceIDs := make(map[int]struct{}, len(data))
-	for i := range data {
+	// Track which device IDs are active and updated
+	activeDeviceIDs := make(map[int]struct{}, len(latestPerDevice))
+	for range latestPerDevice {
 		rows, err := br.Query()
 		if err != nil {
 			br.Close()
-			return fmt.Errorf("[%s]>[%s] batch update failed at index %d: %w", r.prefixError, fname, i, err)
+			return fmt.Errorf("[%s]>[%s] batch update failed: %w", r.prefixError, fname, err)
 		}
 
 		var updatedID int
@@ -62,7 +74,7 @@ func (r *deviceGatewayRepo) BulkUpsertDeviceData(ctx context.Context, data []mod
 			if err := rows.Scan(&updatedID); err != nil {
 				rows.Close()
 				br.Close()
-				return fmt.Errorf("[%s]>[%s] scan failed at index %d: %w", r.prefixError, fname, i, err)
+				return fmt.Errorf("[%s]>[%s] scan failed: %w", r.prefixError, fname, err)
 			}
 			activeDeviceIDs[updatedID] = struct{}{}
 		}
@@ -73,7 +85,7 @@ func (r *deviceGatewayRepo) BulkUpsertDeviceData(ctx context.Context, data []mod
 		return fmt.Errorf("[%s]>[%s] batch close failed: %w", r.prefixError, fname, err)
 	}
 
-	// 2. Filter data for CopyFrom — only include logs for active devices
+	// Insert ALL logs for active devices using CopyFrom
 	var rows [][]any
 	for _, d := range data {
 		if _, ok := activeDeviceIDs[d.DeviceId]; ok {
@@ -97,7 +109,7 @@ func (r *deviceGatewayRepo) BulkUpsertDeviceData(ctx context.Context, data []mod
 		}
 	}
 
-	// 3. Commit
+	// Commit
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("[%s]>[%s] commit failed: %w", r.prefixError, fname, err)
 	}

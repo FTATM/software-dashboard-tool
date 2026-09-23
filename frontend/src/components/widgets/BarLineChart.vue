@@ -59,6 +59,7 @@ const aggregatedCategories = shallowRef([]);
 const aggregatedValues = shallowRef([]);
 const aggregatedLineValues = shallowRef([]);
 const lastProcessedTimestamp = ref(null);
+const historyDeviceName = ref('');
 
 const widgetInstanceId = `barline2-${props.widgetData?.id || Math.random().toString(36).substring(2, 9)}`;
 
@@ -68,7 +69,10 @@ const liveStreamStore = useLiveStreamStore();
 const chartConfig = computed(() => props.widgetData?.customChartData || {});
 const hasDevices = computed(() => props.widgetData?.deviceIds && props.widgetData.deviceIds.length > 0);
 const deviceId = computed(() => hasDevices.value ? String(props.widgetData.deviceIds[0]) : null);
-const liveDeviceName = computed(() => deviceId.value && liveStreamStore.liveData?.[deviceId.value]?.name || '');
+const liveDeviceName = computed(() => {
+  if (!deviceId.value) return '';
+  return liveStreamStore.liveData?.[deviceId.value]?.name || historyDeviceName.value || '';
+});
 const showDeviceName = computed(() => chartConfig.value.showDeviceName !== undefined ? chartConfig.value.showDeviceName : true);
 
 const backgroundStyle = computed(() => {
@@ -121,8 +125,14 @@ const initializeAndBucketHistory = async () => {
 
   await fetchHistoryApi(`/device/charthistory?deviceIds=${deviceId.value}&from=${utcFrom}&to=${utcTo}&maxPoints=5000`);
 
-  if (!historyError.value && historyData.value && historyData.value.data[deviceId.value]) {
-    const rawPoints = historyData.value.data[deviceId.value];
+  const deviceHistory = historyData.value?.data?.[deviceId.value];
+  if (!historyError.value && deviceHistory) {
+    // Unpack data array and save device name
+    const rawPoints = Array.isArray(deviceHistory) ? deviceHistory : (deviceHistory.data || []);
+    if (deviceHistory.name) {
+      historyDeviceName.value = deviceHistory.name;
+    }
+
     const interval = chartConfig.value.bucketInterval || 'day';
     const aggregation = chartConfig.value.aggregationMode || 'sum';
     const buckets = {};

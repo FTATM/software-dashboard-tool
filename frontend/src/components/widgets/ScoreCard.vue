@@ -80,6 +80,7 @@ const isReady = ref(false);
 const isLoadingHistory = ref(false);
 const historyValues = shallowRef([]); 
 const liveDataHistory = shallowRef([]);
+const historyDeviceNames = shallowRef({});
 
 const liveStreamStore = useLiveStreamStore();
 const { data: historyData, error: historyError, execute: fetchHistoryApi } = useFetch();
@@ -179,7 +180,9 @@ const subTextLabel = computed(() => {
   const ids = props.widgetData.deviceIds || [];
   if (mode === 'live_single') {
     const firstId = ids[0] ? String(ids[0]) : null;
-    return (firstId && liveStreamStore.liveData[firstId]?.name) || `${t('scoreCard.devicePrefix')} ${firstId || '?'}`;
+    const name = (firstId && (liveStreamStore.liveData[firstId]?.name || historyDeviceNames.value[firstId])) 
+      || `${t('scoreCard.devicePrefix')} ${firstId || '?'}`;
+    return name;
   }
   if (mode === 'live_count') return `${ids.length} ${t('common.devices')}`;
 
@@ -226,17 +229,35 @@ const initializeHistory = async () => {
   isLoadingHistory.value = true;
   await fetchHistoryApi(`/device/charthistory?deviceIds=${rawDeviceIds.join(',')}&from=${encodeURIComponent(utcFrom)}&to=${encodeURIComponent(utcTo)}&maxPoints=${chartData.value.maxPoints || 1000}`);
   
-  if (!historyError.value && historyData.value) {
+  if (!historyError.value && historyData.value?.data) {
     const flatValues = [];
-    Object.values(historyData.value.data).forEach(pointsArr => {
+    const names = {};
+    Object.entries(historyData.value.data).forEach(([id, item]) => {
+      const pointsArr = Array.isArray(item) ? item : (item?.data || []);
+      if (item?.name) {
+        names[String(id)] = item.name;
+      }
       pointsArr.forEach(p => { 
         if (p[1] !== null && p[1] !== undefined) flatValues.push(Number(p[1])); 
       });
     });
     historyValues.value = flatValues;
+    historyDeviceNames.value = names;
   }
   isLoadingHistory.value = false;
 };
+
+watch(
+  () => [props.widgetData?.deviceIds, chartData.value.aggregationMode, chartData.value.historyRange], 
+  (newVals, oldVals) => {
+    if (JSON.stringify(newVals) === JSON.stringify(oldVals)) return;
+    historyValues.value = [];
+    liveDataHistory.value = [];
+    historyDeviceNames.value = {};
+    initializeHistory();
+  }, 
+  { deep: true }
+);
 
 onMounted(async () => {
   if (props.widgetData?.deviceIds?.length) {

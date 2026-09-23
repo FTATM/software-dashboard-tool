@@ -98,6 +98,57 @@ const config = computed(() => {
   };
 });
 
+// Binary search to find the nearest recorded point in time
+const findClosestPoint = (data, targetTime) => {
+  if (!data || data.length === 0) return null;
+  let low = 0;
+  let high = data.length - 1;
+
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (data[mid][0] === targetTime) return data[mid];
+    if (data[mid][0] < targetTime) low = mid + 1;
+    else high = mid - 1;
+  }
+
+  if (low >= data.length) return data[data.length - 1];
+  if (high < 0) return data[0];
+
+  const d1 = Math.abs(data[low][0] - targetTime);
+  const d2 = Math.abs(data[high][0] - targetTime);
+  return d1 < d2 ? data[low] : data[high];
+};
+
+// Dynamically calculate acceptable gap based on total view span & point density
+const getToleranceMs = () => {
+  let totalSpanMs = 0;
+  const range = config.value.historyRange;
+
+  if (range === 'custom' && config.value.customFrom) {
+    const fromTime = new Date(config.value.customFrom).getTime();
+    const toTime = config.value.customTo ? new Date(config.value.customTo).getTime() : Date.now();
+    totalSpanMs = Math.max(toTime - fromTime, 0);
+  } else {
+    switch (range) {
+      case '15m': totalSpanMs = 15 * 60 * 1000; break;
+      case '30m': totalSpanMs = 30 * 60 * 1000; break;
+      case '1h':  totalSpanMs = 60 * 60 * 1000; break;
+      case '3h':  totalSpanMs = 3 * 60 * 60 * 1000; break;
+      case '6h':  totalSpanMs = 6 * 60 * 60 * 1000; break;
+      case '24h': totalSpanMs = 24 * 60 * 60 * 1000; break;
+      case '7d':  totalSpanMs = 7 * 24 * 60 * 60 * 1000; break;
+      default:    totalSpanMs = 60 * 60 * 1000;
+    }
+  }
+
+  const maxPoints = config.value.maxPoints || 100;
+  // Calculate average interval between points
+  const avgBucketInterval = totalSpanMs / maxPoints;
+
+  // Allow up to 1.5x the bucket interval, with a minimum floor of 30 seconds for live streaming
+  return Math.max(avgBucketInterval * 1.5, 30 * 1000);
+};
+
 const initializeHistory = async () => {
   const rawDeviceIds = props.widgetData?.deviceIds || [];
   if (rawDeviceIds.length === 0 || config.value.historyRange === '0') return;
@@ -138,11 +189,17 @@ const initializeHistory = async () => {
 
   await fetchHistoryApi(apiUrl);
 
-  if (!historyError.value && historyData.value) {
+  if (!historyError.value && historyData.value?.data) {
     const newSeries = {};
-    Object.entries(historyData.value.data).forEach(([id, pointsArr]) => {
+    Object.entries(historyData.value.data).forEach(([id, item]) => {
       const deviceIdStr = String(id);
-      newSeries[deviceIdStr] = { name: `${t('common.device')} ${id}`, data: pointsArr || [] };
+      const pointsArr = Array.isArray(item) ? item : (item?.data || []);
+      const deviceName = item?.name || `${t('common.device')} ${id}`;
+
+      newSeries[deviceIdStr] = { 
+        name: deviceName, 
+        data: pointsArr 
+      };
 
       // Seed latest timestamp to prevent duplicate live additions
       if (pointsArr && pointsArr.length > 0) {
@@ -182,7 +239,6 @@ watch(
     const rawDeviceIds = props.widgetData?.deviceIds || [];
     if (rawDeviceIds.length === 0) return;
 
-    // ⚡ FIX 2: Skip entire watcher if no devices on THIS widget received new data
     const hasRelevantUpdate = rawDeviceIds.some(rawId => {
       const id = String(rawId);
       const dev = newData[id];
@@ -219,8 +275,13 @@ watch(
         nextSeries[id].name = device.name;
       }
 
-      // ⚡ FIX 1: Mutate in-place using .push() and native .splice() (NOT array spreading or shift loops)
       const currentData = nextSeries[id].data;
+      if (currentData.length > 0) {
+        const lastPoint = currentData[currentData.length - 1];
+        if (lastPoint[0] === eventTime) {
+          return;
+        }
+      }
       currentData.push([eventTime, Number(device.value)]);
 
       if (currentData.length > config.value.maxPoints) {
@@ -297,14 +358,40 @@ const chartOption = computed(() => {
     tooltip: {
       trigger: 'axis',
       formatter: (params) => {
-        if (!params.length) return '';
-        const timeStr = formatTime(params[0].value[0]);
+        if (!params || !params.length) return '';
+        const hoverTime = params[0].value[0];
+        const timeStr = formatTime(hoverTime);
+        const toleranceMs = getToleranceMs();
 
         let tipHtml = `<strong>${timeStr}</strong><br/>`;
+
+        // Map series that match the hovered tick exactly
+        const matchedMap = new Map();
         params.forEach(p => {
-          const val = p.value[1] !== undefined && p.value[1] !== null ? Number(p.value[1]).toFixed(2) : '-';
-          tipHtml += `${p.marker} <span style="color:${chartTextColor}">${p.seriesName}: <b>${val}</b></span><br/>`;
+          matchedMap.set(p.seriesName, p);
         });
+
+        // Check each line series
+        dynamicSeries.forEach(s => {
+          const matched = matchedMap.get(s.name);
+          let valStr = '-';
+
+          if (matched && matched.value[1] !== undefined && matched.value[1] !== null) {
+            valStr = Number(matched.value[1]).toFixed(2);
+          } else if (s.data && s.data.length > 0) {
+            const closest = findClosestPoint(s.data, hoverTime);
+            // Only show value if within the dynamic tolerance window
+            if (closest && Math.abs(closest[0] - hoverTime) <= toleranceMs) {
+              if (closest[1] !== undefined && closest[1] !== null) {
+                valStr = Number(closest[1]).toFixed(2);
+              }
+            }
+          }
+
+          const marker = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${s.itemStyle.color};"></span>`;
+          tipHtml += `${marker} <span style="color:${chartTextColor}">${s.name}: <b>${valStr}</b></span><br/>`;
+        });
+
         return tipHtml;
       }
     },

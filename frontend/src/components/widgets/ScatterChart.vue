@@ -144,11 +144,17 @@ const initializeHistory = async () => {
   const apiUrl = `/device/charthistory?deviceIds=${idQuery}&from=${fromQuery}&to=${toQuery}&maxPoints=${config.value.maxPoints}`;
 
   await fetchHistoryApi(apiUrl);
-  if (!historyError.value && historyData.value) {
+  if (!historyError.value && historyData.value?.data) {
     const newSeries = {};
-    Object.entries(historyData.value.data).forEach(([id, pointsArr]) => {
+    Object.entries(historyData.value.data).forEach(([id, item]) => {
       const deviceIdStr = String(id);
-      newSeries[deviceIdStr] = { name: `${t('common.device')} ${id}`, data: pointsArr || [] };
+      const pointsArr = Array.isArray(item) ? item : (item?.data || []);
+      const deviceName = item?.name || `${t('common.device')} ${id}`;
+
+      newSeries[deviceIdStr] = {
+        name: deviceName,
+        data: pointsArr
+      };
 
       if (pointsArr && pointsArr.length > 0) {
         const lastPoint = pointsArr[pointsArr.length - 1];
@@ -220,6 +226,12 @@ watch(
 
       // ⚡ FIX: Mutate array in-place without spreading
       const currentData = nextSeries[id].data;
+      if (currentData.length > 0) {
+        const lastPoint = currentData[currentData.length - 1];
+        if (lastPoint[0] === eventTime) {
+          return;
+        }
+      }
       currentData.push([eventTime, Number(device.value)]);
 
       if (currentData.length > config.value.maxPoints) {
@@ -255,6 +267,56 @@ watch(
   },
   { deep: true }
 );
+
+// Dynamic tolerance window based on chart's time range & point density
+const getToleranceMs = () => {
+  let totalSpanMs = 0;
+  const range = config.value.historyRange;
+
+  if (range === 'custom' && config.value.customFrom) {
+    const fromTime = new Date(config.value.customFrom).getTime();
+    const toTime = config.value.customTo ? new Date(config.value.customTo).getTime() : Date.now();
+    totalSpanMs = Math.max(toTime - fromTime, 0);
+  } else {
+    switch (range) {
+      case '15m': totalSpanMs = 15 * 60 * 1000; break;
+      case '30m': totalSpanMs = 30 * 60 * 1000; break;
+      case '1h': totalSpanMs = 60 * 60 * 1000; break;
+      case '3h': totalSpanMs = 3 * 60 * 60 * 1000; break;
+      case '6h': totalSpanMs = 6 * 60 * 60 * 1000; break;
+      case '24h': totalSpanMs = 24 * 60 * 60 * 1000; break;
+      case '7d': totalSpanMs = 7 * 24 * 60 * 60 * 1000; break;
+      default: totalSpanMs = 60 * 60 * 1000;
+    }
+  }
+
+  const maxPoints = config.value.maxPoints || 100;
+  const avgBucketInterval = totalSpanMs / maxPoints;
+
+  // 1.5x bucket spacing with a 30s minimum floor for live streaming
+  return Math.max(avgBucketInterval * 1.5, 30 * 1000);
+};
+
+// Binary search to find the closest recorded data point in time for a device
+const findClosestPoint = (data, targetTime) => {
+  if (!data || data.length === 0) return null;
+  let low = 0;
+  let high = data.length - 1;
+
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (data[mid][0] === targetTime) return data[mid];
+    if (data[mid][0] < targetTime) low = mid + 1;
+    else high = mid - 1;
+  }
+
+  if (low >= data.length) return data[data.length - 1];
+  if (high < 0) return data[0];
+
+  const d1 = Math.abs(data[low][0] - targetTime);
+  const d2 = Math.abs(data[high][0] - targetTime);
+  return d1 < d2 ? data[low] : data[high];
+};
 
 const chartOption = computed(() => {
   const fallbackColors = [
@@ -309,11 +371,51 @@ const chartOption = computed(() => {
   return {
     textStyle: { color: chartTextColor },
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        lineStyle: { type: 'dashed', opacity: 0.4 },
+        crossStyle: { color: chartTextColor }
+      },
       formatter: (params) => {
-        const timeStr = formatTime(params.value[0]);
-        const yValue = params.value[1] !== undefined && params.value[1] !== null ? Number(params.value[1]).toFixed(2) : '-';
-        return `<strong>${params.seriesName}</strong><br/>${timeStr}<br/>${t('scatterChart.value')}: <span style="color:${chartTextColor}">${yValue}</span>`;
+        if (!params || !params.length) return '';
+        const hoverTime = params[0].value[0];
+        const timeStr = formatTime(hoverTime);
+        const toleranceMs = getToleranceMs(); // 👈 1. Calculate tolerance
+
+        let tipHtml = `<strong>${timeStr}</strong><br/>`;
+
+        // Map series that match the hovered tick exactly
+        const matchedMap = new Map();
+        params.forEach(p => {
+          matchedMap.set(p.seriesName, p);
+        });
+
+        // Only display scatter device points (skip trend lines)
+        const scatterSeries = dynamicSeries.filter(s => s.type === 'scatter');
+
+        scatterSeries.forEach(s => {
+          const matched = matchedMap.get(s.name);
+          let valStr = '-';
+
+          if (matched && matched.value[1] !== undefined && matched.value[1] !== null) {
+            valStr = Number(matched.value[1]).toFixed(2);
+          } else if (s.data && s.data.length > 0) {
+            const closest = findClosestPoint(s.data, hoverTime);
+            // 2. Only show value if within the dynamic tolerance window
+            if (closest && Math.abs(closest[0] - hoverTime) <= toleranceMs) {
+              if (closest[1] !== undefined && closest[1] !== null) {
+                valStr = Number(closest[1]).toFixed(2);
+              }
+            }
+          }
+
+          const color = s.itemStyle?.color || chartTextColor;
+          const marker = `<span style="display:inline-block;margin-right:4px;border-radius:50%;width:8px;height:8px;background-color:${color};"></span>`;
+          tipHtml += `${marker} <span style="color:${chartTextColor}">${s.name}: <b>${valStr}</b></span><br/>`;
+        });
+
+        return tipHtml;
       }
     },
     legend: {

@@ -338,17 +338,22 @@ func (h *UserHandler) LinkLine(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.UserLinkLineUserToken(r.Context(), linkLine, 0)
 	if err != nil {
-		var code int
-		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, model.ErrInvalidLogin) {
+		code := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, model.ErrInvalidLogin):
+			code = http.StatusUnauthorized
 			res.Message = model.ErrInvalidLogin.Error()
-			code = http.StatusBadRequest
-		} else if errors.Is(err, model.ErrNotActive) {
+
+		case errors.Is(err, model.ErrNotActive):
+			code = http.StatusForbidden
 			res.Message = model.ErrNotActive.Error()
-			code = http.StatusBadRequest
-		} else {
-			res.Message = "Error"
-			code = http.StatusInternalServerError
-			slog.ErrorContext(r.Context(), res.Message,
+
+		case errors.Is(err, model.ErrDuplicate):
+			code = http.StatusConflict
+			res.Message = model.ErrDuplicate.Error()
+
+		default:
+			slog.ErrorContext(r.Context(), "Internal server error",
 				slog.String("track", err.Error()),
 			)
 		}

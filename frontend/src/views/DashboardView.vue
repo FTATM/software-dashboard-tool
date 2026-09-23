@@ -11,10 +11,13 @@
         class="inline-flex items-center gap-2 bg-base-100/80 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-sm border border-base-200/50 hover:bg-base-100 transition-colors">
         <Icon icon="lucide:layout-dashboard" class="w-4 h-4 text-primary shrink-0" />
         <select id="canvas-select" v-model="activeCanvasId" @change="loadCurrentCanvas()"
-          class="select select-sm border-none bg-transparent shadow-none focus:ring-0 focus:outline-none min-w-[180px] font-bold text-base-content p-0 h-auto min-h-0 pl-1">
-          <option v-for="[id, canvas] in allUserCanvasesMap" :key="id" :value="id">
+          class="select select-sm border-none shadow-none focus:ring-0 focus:outline-none min-w-[180px] font-bold p-0 h-auto min-h-0 pl-1">
+
+          <option v-for="[id, canvas] in allUserCanvasesMap" :key="id" :value="id"
+            class="bg-base-100 text-base-content">
             {{ canvas.name }}
           </option>
+
         </select>
       </div>
 
@@ -89,7 +92,7 @@
                 <thead class="bg-base-200/80 sticky top-0 z-10 backdrop-blur-sm">
                   <tr>
                     <th v-for="col in queryColumns" :key="col" class="uppercase tracking-wider font-bold text-xs">{{ col
-                    }}</th>
+                      }}</th>
                   </tr>
                 </thead>
                 <tbody>

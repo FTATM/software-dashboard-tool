@@ -116,6 +116,11 @@ type ChartData struct {
 	DeviceData map[int]ChartDeviceData `json:"deviceData"`
 }
 
+type ChartHistoryData struct {
+	DeviceName string       `json:"name"`
+	Data       [][2]float64 `json:"data"`
+}
+
 type TriggerCommandReq struct {
 	DeviceIds  []int       `json:"deviceIds"`
 	IsGroup    bool        `json:"isGroup"`
@@ -165,7 +170,7 @@ type DeviceService interface {
 	StartPublic(ctx context.Context)
 	AddClient(deviceID string, clientChan chan ChartData)
 	RemoveClient(deviceID string, clientChan chan ChartData)
-	GetChartHistory(ctx context.Context, deviceId []int, maxPoints int, from, to time.Time) (map[int][][2]float64, error)
+	GetChartHistory(ctx context.Context, deviceId []int, maxPoints int, from, to time.Time) (map[int]ChartHistoryData, error)
 	GetDeviceGroupDetail(ctx context.Context) ([]DeviceGroupDetail, error)
 	CreateDeviceGroup(ctx context.Context, createDeviceG CreateDeviceGroup, authUserId int) error
 	UpdateDeviceGroup(ctx context.Context, updateDeviceG *UpdateDeviceGroup, authUserId int) error

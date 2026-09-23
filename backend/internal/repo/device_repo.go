@@ -201,7 +201,7 @@ func (r *deviceRepo) Delete(ctx context.Context, deviceId int) error {
 			SET 
 				active = false,
 				deleted_at = now()
-			WHERE device_id = $1
+			WHERE device_id = $1 OR ref_device_id = $1
 		`
 	result, err := r.db(ctx).Exec(ctx, query, deviceId)
 
@@ -209,7 +209,7 @@ func (r *deviceRepo) Delete(ctx context.Context, deviceId int) error {
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
 
-	if result.RowsAffected() != 1 {
+	if result.RowsAffected() == 0 {
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, pgx.ErrNoRows)
 	}
 
@@ -236,7 +236,7 @@ func (r *deviceRepo) GetProtocolType(ctx context.Context) ([]string, error) {
 }
 
 func (r *deviceRepo) GetByIdChartDeviceData(ctx context.Context, id int) (model.ChartDeviceData, error) {
-	const fname = "GetByIdChartDevice"
+	const fname = "GetByIdChartDeviceData"
 	device := model.ChartDeviceData{}
 	query := `
 		SELECT 
@@ -246,7 +246,7 @@ func (r *deviceRepo) GetByIdChartDeviceData(ctx context.Context, id int) (model.
 			d.raw_min, d.raw_max, d.eu_min, d.eu_max
 		FROM device d
 		LEFT JOIN device ref ON d.ref_device_id = ref.device_id
-		WHERE d.device_id = $1
+		WHERE d.device_id = $1 AND d.deleted_at IS NULL
 	`
 	err := r.db(ctx).QueryRow(ctx, query, id).Scan(
 		&device.DeviceName,

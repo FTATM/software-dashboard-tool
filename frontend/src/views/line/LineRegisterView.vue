@@ -169,11 +169,16 @@ onMounted(async () => {
   }
 
   try {
-    await liff.init({ liffId: LIFF_ID });
+    // ป้องกัน liff.init ค้างเกิน 7 วินาที
+    await Promise.race([
+      liff.init({ liffId: LIFF_ID }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('LIFF init timeout')), 7000)
+      )
+    ]);
 
     if (!liff.isInClient()) {
       isInLineApp.value = false;
-      isLiffInitializing.value = false;
       return;
     }
 
@@ -181,6 +186,7 @@ onMounted(async () => {
       lineProfile.value = await liff.getProfile();
     }
   } catch (err) {
+    console.error('LIFF init error:', err);
     toast.error(err.message || 'Failed to initialize LINE LIFF');
   } finally {
     isLiffInitializing.value = false;
@@ -212,7 +218,7 @@ const handleSubmit = async () => {
     } else {
       if (linkError.value?.message === 't_invalid_user_password') {
         errorMessage.value = t('login.invalidLogin');
-      } else {
+      }  else {
         errorMessage.value = handleError(linkError, 'common.messages.loadError');
       }
     }

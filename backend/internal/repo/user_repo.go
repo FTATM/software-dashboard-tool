@@ -2,10 +2,12 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/FTATM/software-dashboard-tool/internal/model"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -28,7 +30,7 @@ func (r *userRepo) db(ctx context.Context) DBTX {
 func (r *userRepo) GetById(ctx context.Context, id int) (*model.User, error) {
 	const fname = "GetById"
 	user := &model.User{}
-	query := `SELECT user_id, first_name, last_name, active, role_id, email, tel FROM "user" WHERE user_id = $1`
+	query := `SELECT user_id, first_name, last_name, active, role_id, email, tel, line_user_token FROM "user" WHERE user_id = $1`
 	err := r.db(ctx).QueryRow(ctx, query, id).Scan(
 		&user.UserId,
 		&user.FirstName,
@@ -37,6 +39,7 @@ func (r *userRepo) GetById(ctx context.Context, id int) (*model.User, error) {
 		&user.RoleId,
 		&user.Email,
 		&user.Tel,
+		&user.LineUserToken,
 	)
 
 	if err != nil {
@@ -134,10 +137,11 @@ func (r *userRepo) Update(ctx context.Context, user *model.User) error {
 				password_hash = COALESCE(NULLIF($4, ''), password_hash),
 				role_id = $6,
 				email = $7,
-				tel = $8
+				tel = $8,
+				line_user_token = CASE WHEN $9::text IS NULL OR $9::text = '' THEN NULL ELSE line_user_token END
 			WHERE user_id = $5
 		`
-	result, err := r.db(ctx).Exec(ctx, query, user.FirstName, user.LastName, user.Active, user.PasswordHash, user.UserId, user.RoleId, user.Email, user.Tel)
+	result, err := r.db(ctx).Exec(ctx, query, user.FirstName, user.LastName, user.Active, user.PasswordHash, user.UserId, user.RoleId, user.Email, user.Tel, user.LineUserToken)
 
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
@@ -224,23 +228,25 @@ func (r *userRepo) GetUserForPermissionById(ctx context.Context, userId int) (*m
 }
 
 func (r *userRepo) UpdateLineUserToken(ctx context.Context, userId int, lineUserToken string) error {
-	const fname = "Delete"
+	const fname = "UpdateLineUserToken"
 	query := `
-			UPDATE "user"
-			SET 
-				line_user_token = $2
-			WHERE user_id = $1
-		`
+        UPDATE "user"
+        SET line_user_token = $2
+        WHERE user_id = $1
+    `
 	result, err := r.db(ctx).Exec(ctx, query, userId, lineUserToken)
-
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, model.ErrDuplicate)
+		}
+		// Catch-all: always return non-duplicate and non-pg errors
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
 	}
 
-	if result.RowsAffected() != 1 {
+	if result.RowsAffected() == 0 {
 		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, pgx.ErrNoRows)
 	}
 
 	return nil
-
 }

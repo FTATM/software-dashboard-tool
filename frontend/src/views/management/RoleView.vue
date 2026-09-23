@@ -93,7 +93,7 @@
                 <button type="button" class="btn btn-xs"
                   :class="isAllSelected(menu) ? 'btn-ghost text-error' : 'btn-outline btn-primary'"
                   @click="toggleSelectAll(menu)">
-                  {{ isAllSelected(menu) ? $t('role.deselectAll') : $t('role.selectAll') }}
+                  {{ isAllSelected(menu) ? $t('common.deselectAll') : $t('common.selectAll') }}
                 </button>
               </div>
 

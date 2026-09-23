@@ -157,6 +157,15 @@
                 <input type="text" :value="form.lineUserToken ? `${form.lineUserToken.slice(0, 8)}...` : ''"
                   :placeholder="$t('user.lineToken')" disabled
                   class="input input-bordered w-full disabled:bg-base-200/50 disabled:text-base-content/60" />
+
+                <!-- Unlink button sets local flag and clears field without calling an API yet -->
+                <button v-if="isEditing && form.lineUserToken" type="button" @click="handleUnlinkLine"
+                  class="btn btn-error btn-outline shrink-0 gap-1.5">
+                  <Icon icon="lucide:unlink" class="w-4 h-4" />
+                  {{ $t('user.unlinkLine') || 'Unlink LINE' }}
+                </button>
+
+                <!-- Connect LINE / QR Code Button -->
                 <button type="button" @click="openLineQrCode"
                   class="btn bg-[#06c755] hover:bg-[#05a546] text-white border-none shrink-0">
                   <Icon icon="lucide:qr-code" class="w-5 h-5 mr-1" />
@@ -302,7 +311,6 @@ const { data: roleData, error: roleAllError, execute: roleFetchApi } = useFetch(
 const permissionStore = usePermissionStore();
 const { hasPermission } = permissionStore;
 
-// Default to empty string instead of test URL
 const URL_OA_BOT = import.meta.env.VITE_LINE_URL_OA_BOT || '';
 const userModal = ref(null);
 const lineQrModal = ref(null);
@@ -333,7 +341,7 @@ const form = ref({
   password: '',
   active: true,
   roleId: null,
-  lineUserToken: ''
+  lineUserToken: '',
 });
 
 const rules = computed(() => ({
@@ -382,10 +390,25 @@ const botHandle = computed(() => {
   return parts[parts.length - 1] || '-';
 });
 
+// Clear token locally and flag for deletion on submit
+const handleUnlinkLine = () => {
+  form.value.lineUserToken = '';
+};
+
 const openCreateModal = () => {
   isEditing.value = false;
   editingUserId.value = null;
-  form.value = { firstName: '', lastName: '', email: '', tel: '', username: '', password: '', active: true, roleId: null, lineUserToken: '' };
+  form.value = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    tel: '',
+    username: '',
+    password: '',
+    active: true,
+    roleId: null,
+    lineUserToken: '',
+  };
   v$.value.$reset();
   userModal.value.showModal();
 };
@@ -402,7 +425,7 @@ const openEditModal = (user) => {
     password: '',
     active: user.active,
     roleId: user.roleId,
-    lineUserToken: user.lineUserToken || ''
+    lineUserToken: user.lineUserToken || '',
   };
   v$.value.$reset();
   userModal.value.showModal();

@@ -52,17 +52,32 @@
           {{ $t('canvasAccess.manageAccessFor') }} <span class="text-primary">{{ editingRole?.roleName }}</span>
         </h3>
 
+        <!-- Select All / Deselect All Bar -->
+        <div class="flex justify-between items-center mb-2 px-1">
+          <span class="text-sm font-semibold text-base-content/70">
+            {{ $t('canvasAccess.assignedCanvases') }} ({{ selectedCanvases.length }}/{{ canvasList.length }})
+          </span>
+          <button v-if="canvasList.length > 0" type="button" class="btn btn-xs"
+            :class="isAllSelected ? 'btn-ghost text-error' : 'btn-outline btn-primary'" @click="toggleSelectAll">
+            {{ isAllSelected ? $t('common.deselectAll') : $t('common.selectAll') }}
+          </button>
+        </div>
+
         <!-- Multi-Select Checkbox List -->
         <div
-          class="form-control w-full max-h-[300px] overflow-y-auto bg-base-200/50 p-4 rounded-box border border-base-200 gap-1">
+          class="flex flex-col w-full max-h-[320px] overflow-y-auto bg-base-200/50 p-2 rounded-box border border-base-200 divide-y divide-base-200">
           <label v-for="canvas in canvasList" :key="canvas.canvasId"
-            class="label cursor-pointer justify-start gap-4 hover:bg-base-200 p-2 rounded-lg transition-colors">
+            class="label cursor-pointer flex items-center justify-start gap-3 w-full hover:bg-base-200 px-3 py-2.5 rounded-lg transition-colors">
+            <!-- shrink-0 keeps checkbox square even when text is very long -->
             <input type="checkbox" :value="canvas.canvasId" v-model="selectedCanvases"
-              class="checkbox checkbox-primary checkbox-sm" />
-            <span class="label-text font-medium text-base">{{ canvas.canvasName }}</span>
+              class="checkbox checkbox-primary checkbox-sm shrink-0" />
+            <!-- truncate cuts off cleanly with ellipsis (...), title shows full name on hover -->
+            <span class="label-text font-medium text-sm truncate" :title="canvas.canvasName">
+              {{ canvas.canvasName }}
+            </span>
           </label>
 
-          <div v-if="canvasList.length === 0" class="text-center py-4 text-sm text-base-content/50">
+          <div v-if="canvasList.length === 0" class="text-center py-6 text-sm text-base-content/50">
             {{ $t('canvasAccess.noCanvasesAvailable') }}
           </div>
         </div>
@@ -170,6 +185,20 @@ const getCanvasName = (id) => {
 
 const getAssignedCanvases = (roleId) => {
   return roleCanvasMap.value.get(roleId) || [];
+};
+
+const isAllSelected = computed(() => {
+  if (canvasList.value.length === 0) return false;
+  return canvasList.value.every(c => selectedCanvases.value.includes(c.canvasId));
+});
+
+// Toggle between selecting all and clearing all
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedCanvases.value = [];
+  } else {
+    selectedCanvases.value = canvasList.value.map(c => c.canvasId);
+  }
 };
 
 const openEditModal = (role) => {

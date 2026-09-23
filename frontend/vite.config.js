@@ -12,9 +12,6 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    // allowedHosts: [
-    //   'baggage-shock-unmixed.ngrok-free.dev'
-    // ],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
