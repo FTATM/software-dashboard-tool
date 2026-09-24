@@ -89,7 +89,6 @@ const executePresetCommand = async () => {
   };
   
   const isGroupTarget = props.widgetData.dataSourceType === 'group';
-  console.log(props.widgetData.dataSourceType)
   const requestBody = {
     deviceIds: props.widgetData.deviceIds,
     isGroup: isGroupTarget,

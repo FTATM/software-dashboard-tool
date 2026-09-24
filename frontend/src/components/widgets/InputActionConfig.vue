@@ -129,7 +129,6 @@
 </template>
 
 <script setup>
-// ... existing script setup block (no changes needed) ...
 import { ref, watch, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -152,14 +151,6 @@ const activeDevices = computed(() => {
   return props.selectedDeviceIds
     .map(id => props.allDevices.find(device => device.deviceId === id))
     .filter(device => device && !device.refDeviceId);
-});
-
-const hasVirtualExcluded = computed(() => {
-  if (!props.selectedDeviceIds) return false;
-  return props.selectedDeviceIds.some(id => {
-    const d = props.allDevices.find(device => device.deviceId === id);
-    return d && !!d.refDeviceId;
-  });
 });
 
 const localConfig = ref({
