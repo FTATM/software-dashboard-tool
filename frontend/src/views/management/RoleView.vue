@@ -1,173 +1,273 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
 
-    <!-- Page Header Card -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:shield" class="w-7 h-7" />
+    <!-- Anchored Page Header Card with Background -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:shield" class="w-6 h-6" />
         </div>
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('role.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('role.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span>{{ $t('menu.management') }}</span>
+            <Icon icon="lucide:chevron-right" class="w-3.5 h-3.5" />
+            <span class="text-primary">{{ $t('role.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('role.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('role.subtitle') }}
+          </p>
         </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button 
+          @click="loadData" 
+          class="btn btn-sm btn-ghost border border-base-300 bg-base-100 hover:bg-base-200 rounded-xl gap-1.5 text-xs font-semibold shadow-xs transition-all"
+          :title="$t('common.refresh')">
+          <Icon icon="lucide:refresh-cw" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
+          <span>{{ $t('common.refresh') }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Data Table -->
-    <TableData :data="roleTable" :columns="tableColumns" :initial-sorting="[{ id: 'roleId', desc: false }]"
-      :is-loading="isLoading">
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
 
-      <template #toolbar-actions>
-        <router-link :to="{ name: 'user' }" class="btn btn-ghost text-blue-600 font-bold underline mr-2">
-          <Icon icon="lucide:arrow-right-from-line" class="w-5 h-5 mr-1" />
-          {{ $t('user.title') }}
-        </router-link>
+    <!-- Main Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="roleTable" 
+        :columns="tableColumns" 
+        :initial-sorting="[{ id: 'roleId', desc: false }]"
+        :is-loading="isLoading">
 
-        <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
-          <Icon icon="lucide:plus" class="w-5 h-5 stroke-[3]" />
-          {{ $t('role.addRole') }}
-        </button>
-      </template>
+        <!-- Toolbar Actions -->
+        <template #toolbar-actions>
+          <router-link 
+            :to="{ name: 'user' }" 
+            class="btn btn-sm btn-outline border-base-300 bg-base-100 hover:bg-base-200 rounded-xl text-xs font-semibold shadow-xs gap-1.5">
+            <Icon icon="lucide:users" class="w-4 h-4 text-base-content/70" />
+            <span>{{ $t('user.title') }}</span>
+          </router-link>
 
-      <template #cell-actions="{ row }">
-        <div class="flex justify-end gap-2">
-          <button class="btn btn-sm btn-primary" @click="openEditModal(row)">
-            <Icon icon="lucide:pencil" class="w-5 h-5" />
+          <button 
+            class="btn btn-sm btn-primary rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white" 
+            @click="openCreateModal">
+            <Icon icon="lucide:plus" class="w-4 h-4" />
+            {{ $t('role.addRole') }}
           </button>
-          <button class="btn btn-sm btn-error text-white" @click="confirmDelete(row)">
-            <Icon icon="lucide:trash-2" class="w-5 h-5" />
-          </button>
-        </div>
-      </template>
-    </TableData>
+        </template>
 
-    <!-- Create / Edit Modal -->
-    <dialog ref="roleModal" class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box p-0 sm:max-w-md overflow-hidden shadow-2xl">
-        <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center">
-          <h3 class="m-0 text-xl font-extrabold text-base-content flex items-center gap-2">
-            <Icon :icon="isEditing ? 'lucide:shield-check' : 'lucide:shield-plus'" class="w-5 h-5 text-primary" />
-            {{ isEditing ? $t('role.editRole') : $t('role.createRole') }}
-          </h3>
+        <!-- ID Cell -->
+        <template #cell-roleId="{ value }">
+          <span class="font-mono text-xs font-bold text-base-content/50">#{{ value }}</span>
+        </template>
+
+        <!-- Role Name Cell -->
+        <template #cell-roleName="{ row }">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              <Icon icon="lucide:shield-check" class="w-4 h-4" />
+            </div>
+            <span class="font-semibold text-base-content tracking-tight text-sm">{{ row.roleName }}</span>
+          </div>
+        </template>
+
+        <!-- Minimal Icon Actions -->
+        <template #cell-actions="{ row }">
+          <div class="flex justify-end items-center gap-1">
+            <button 
+              @click="openEditModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              :title="$t('common.edit')">
+              <Icon icon="lucide:pencil" class="w-4 h-4" />
+            </button>
+            <button 
+              @click="confirmDelete(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-error hover:bg-error/10 transition-colors"
+              :title="$t('common.delete')">
+              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
+      </TableData>
+    </div>
+
+    <!-- Create/Edit Modal with Scrollable Body -->
+    <dialog ref="roleModal" class="modal">
+      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[85vh] border border-base-300 bg-base-100">
+        <!-- Pinned Header -->
+        <div class="px-6 py-4 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-primary/10 text-primary">
+              <Icon :icon="isEditing ? 'lucide:shield-check' : 'lucide:shield-plus'" class="w-5 h-5" />
+            </div>
+            <div>
+              <h3 class="m-0 text-lg font-bold text-base-content">
+                {{ isEditing ? $t('role.editRole') :$t('role.createRole') }}
+              </h3>
+              <p class="m-0 text-xs text-base-content/50">
+                {{ isEditing ? $t('role.editSubtitle') :$t('role.createSubtitle') }}
+              </p>
+            </div>
+          </div>
           <button class="btn btn-sm btn-circle btn-ghost" @click="closeModal" :disabled="isSaving">
             <Icon icon="lucide:x" class="w-4 h-4" />
           </button>
         </div>
 
-        <form @submit.prevent="submitForm" autocomplete="off" class="p-6 bg-base-100 flex flex-col gap-4">
-          <!-- Role Name Input -->
-          <label class="form-control w-full">
-            <div class="label pb-1 flex justify-between">
-              <div>
-                <span class="label-text font-semibold">{{ $t('common.roleName') }}</span>
-                <span class="label-text-alt text-error ml-1">*</span>
+        <!-- Form Wrapper -->
+        <form @submit.prevent="submitForm" autocomplete="off" class="flex flex-col flex-1 overflow-hidden bg-base-100">
+          <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+
+            <!-- Role Name Input -->
+            <label class="form-control w-full">
+              <div class="label pb-1 flex justify-between items-center">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ $t('common.roleName') }}
+                  <span class="text-error ml-0.5">*</span>
+                </span>
+                <span class="label-text-alt text-base-content/50 font-mono text-[11px]">{{ form.roleName?.length || 0 }}/31</span>
               </div>
-              <!-- Added character counter -->
-              <span class="label-text-alt text-base-content/60 font-mono">{{ form.roleName?.length || 0 }}/31</span>
-            </div>
-            <!-- Added maxlength="31" -->
-            <input type="text" v-model="form.roleName" maxlength="31" class="input input-bordered w-full"
-              :placeholder="$t('role.roleNamePlaceholder')" @blur="v$.roleName.$touch()"
-              :class="{ 'input-error': v$.roleName.$error }" />
-            <div class="label px-1 py-1 h-6">
-              <span v-if="v$.roleName.$error" class="label-text-alt text-error font-medium">
-                {{ v$.roleName.$errors[0].$message }}
-              </span>
-            </div>
-          </label>
+              <input 
+                type="text" 
+                v-model="form.roleName" 
+                maxlength="31" 
+                class="input input-sm h-10 input-bordered w-full rounded-xl"
+                :placeholder="$t('role.roleNamePlaceholder')" 
+                @blur="v$.roleName.$touch()"
+                :class="{ 'input-error': v$.roleName.$error }" />
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.roleName.$error" class="label-text-alt text-error font-medium text-xs">
+                  {{ v$.roleName.$errors[0].$message }}
+                </span>
+              </div>
+            </label>
 
-          <!-- Permissions Checklist -->
-          <div class="divider text-sm font-bold text-base-content/50 mt-0 mb-0">{{ $t('role.permissions') }}</div>
-
-          <div v-if="isLoadingMenuAvailable || isLoadingRole" class="flex justify-center py-8">
-            <span class="loading loading-spinner loading-lg text-primary"></span>
-          </div>
-
-          <div v-else class="flex flex-col gap-4 max-h-64 overflow-y-auto pr-2">
-            <div v-for="menu in menuAvailables" :key="menu.menuId"
-              class="bg-base-200/30 p-3 rounded-lg border border-base-200">
-              <div class="flex justify-between items-center mb-3 border-b border-base-300 pb-2">
-                <h4 class="font-extrabold text-base-content text-lg m-0">{{ getMenuTranslation(menu.menuName) }}</h4>
-                <button type="button" class="btn btn-xs"
-                  :class="isAllSelected(menu) ? 'btn-ghost text-error' : 'btn-outline btn-primary'"
-                  @click="toggleSelectAll(menu)">
-                  {{ isAllSelected(menu) ? $t('common.deselectAll') : $t('common.selectAll') }}
-                </button>
+            <!-- Permissions Checklist Box -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between pb-1 border-b border-base-200">
+                <span class="font-bold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ $t('role.permissions') }}
+                </span>
+                <span class="text-xs text-base-content/50 font-mono">
+                  {{ form.selectedPermissions.length }} selected
+                </span>
               </div>
 
-              <!-- Flat Actions -->
-              <div v-if="menu.availableActions && menu.availableActions.length > 0"
-                class="flex flex-wrap gap-4 pl-2 mb-2">
-                <label v-for="action in getSortedActions(menu.availableActions)" :key="action.actionId"
-                  class="cursor-pointer label p-0 flex gap-2">
-                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                    :value="`${menu.menuId}-${action.actionId}`" v-model="form.selectedPermissions" />
-                  <span class="label-text font-medium">{{ getActionTranslation(action.actionName) }}</span>
-                </label>
+              <!-- Loading State -->
+              <div v-if="isLoadingMenuAvailable || isLoadingRole" class="flex justify-center py-8">
+                <span class="loading loading-spinner loading-md text-primary"></span>
               </div>
 
-              <!-- Nested Submenus -->
-              <div v-if="menu.submenus && menu.submenus.length > 0" class="flex flex-col gap-3 pl-2 mt-2">
-                <div v-for="sub in menu.submenus" :key="sub.menuId">
-                  <h5 class="font-semibold text-xs text-base-content/70 mb-1 border-l-2 border-primary pl-2">
-                    {{ getMenuTranslation(sub.menuName) }}
-                  </h5>
-                  <div class="flex flex-wrap gap-4 pl-3">
-                    <label v-for="action in getSortedActions(sub.availableActions)" :key="action.actionId"
-                      class="cursor-pointer label p-0 flex gap-2">
-                      <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                        :value="`${sub.menuId}-${action.actionId}`" v-model="form.selectedPermissions" />
-                      <span class="label-text font-medium">{{ getActionTranslation(action.actionName) }}</span>
+              <!-- Permissions Matrix -->
+              <div v-else class="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
+                <div 
+                  v-for="menu in menuAvailables" 
+                  :key="menu.menuId"
+                  class="bg-base-200/50 p-3.5 rounded-xl border border-base-300 flex flex-col gap-2">
+                  
+                  <div class="flex justify-between items-center border-b border-base-300 pb-2">
+                    <span class="font-bold text-sm text-base-content">{{ getMenuTranslation(menu.menuName) }}</span>
+                    <button 
+                      type="button" 
+                      class="btn btn-xs rounded-lg font-medium transition-all"
+                      :class="isAllSelected(menu) ? 'btn-ghost text-error hover:bg-error/10' : 'btn-ghost text-primary hover:bg-primary/10'"
+                      @click="toggleSelectAll(menu)">
+                      {{ isAllSelected(menu) ? $t('common.deselectAll') :$t('common.selectAll') }}
+                    </button>
+                  </div>
+
+                  <!-- Flat Actions -->
+                  <div v-if="menu.availableActions && menu.availableActions.length > 0" class="flex flex-wrap gap-3 py-1">
+                    <label 
+                      v-for="action in getSortedActions(menu.availableActions)" 
+                      :key="action.actionId"
+                      class="cursor-pointer label p-0 flex items-center gap-1.5 text-xs text-base-content/80 hover:text-base-content select-none">
+                      <input 
+                        type="checkbox" 
+                        class="checkbox checkbox-xs checkbox-primary rounded-md"
+                        :value="`${menu.menuId}-${action.actionId}`" 
+                        v-model="form.selectedPermissions" />
+                      <span class="font-medium">{{ getActionTranslation(action.actionName) }}</span>
                     </label>
+                  </div>
+
+                  <!-- Nested Submenus -->
+                  <div v-if="menu.submenus && menu.submenus.length > 0" class="flex flex-col gap-2.5 pt-1 border-t border-base-300/60">
+                    <div v-for="sub in menu.submenus" :key="sub.menuId" class="pl-2 border-l-2 border-primary/40 space-y-1">
+                      <span class="font-semibold text-xs text-base-content/70 block">
+                        {{ getMenuTranslation(sub.menuName) }}
+                      </span>
+                      <div class="flex flex-wrap gap-3">
+                        <label 
+                          v-for="action in getSortedActions(sub.availableActions)" 
+                          :key="action.actionId"
+                          class="cursor-pointer label p-0 flex items-center gap-1.5 text-xs text-base-content/80 hover:text-base-content select-none">
+                          <input 
+                            type="checkbox" 
+                            class="checkbox checkbox-xs checkbox-primary rounded-md"
+                            :value="`${sub.menuId}-${action.actionId}`" 
+                            v-model="form.selectedPermissions" />
+                          <span class="font-medium">{{ getActionTranslation(action.actionName) }}</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
 
-          <!-- Modal Actions -->
-          <div class="modal-action mt-2 border-t border-base-200 pt-5">
-            <button type="button" class="btn btn-ghost" @click="closeModal" :disabled="isSaving">
+          <!-- Pinned Footer -->
+          <div class="border-t border-base-200 p-4 px-6 flex justify-end gap-2 shrink-0 bg-base-100">
+            <button type="button" class="btn btn-sm btn-ghost rounded-xl" @click="closeModal" :disabled="isSaving">
               {{ $t('common.cancel') }}
             </button>
-            <button type="submit" class="btn btn-primary text-white px-8" :disabled="isSaving">
-              <span v-if="isSaving" class="loading loading-spinner loading-sm"></span>
-              {{ isEditing ? $t('common.save') : $t('role.createRole') }}
+            <button type="submit" class="btn btn-sm btn-primary rounded-xl px-6 text-white font-semibold" :disabled="isSaving">
+              <span v-if="isSaving" class="loading loading-spinner loading-xs"></span>
+              {{ isEditing ? $t('common.save') :$t('role.createRole') }}
             </button>
           </div>
         </form>
       </div>
 
-      <form method="dialog" class="modal-backdrop" @click="closeModal">
-        <button>close</button>
-      </form>
+      <form method="dialog" class="modal-backdrop" @click="closeModal"><button>close</button></form>
     </dialog>
 
-    <dialog ref="deleteModal" class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box">
+    <!-- Delete Modal -->
+    <dialog ref="deleteModal" class="modal z-[200]">
+      <div class="modal-box rounded-2xl border border-base-300 p-6">
         <h3 class="font-bold text-lg text-error flex items-center gap-2">
-          <Icon icon="lucide:alert-triangle" class="w-6 h-6" />
-          {{ $t('common.confirmDelete') || 'Confirm Deletion' }}
+          <Icon icon="lucide:alert-triangle" class="w-5 h-5" />
+          {{ $t('common.confirmDelete') }}
         </h3>
-        <p class="py-4">
-          {{ $t('role.deleteWarning', { name: roleToDelete?.roleName }) || 'Are you sure you want to delete the role:' }}
+        <p class="py-3 text-sm text-base-content/80">
+          {{ $t('role.deleteWarning', { name: roleToDelete?.roleName }) }}
         </p>
-        <div class="modal-action">
-          <button class="btn btn-ghost" @click="closeDeleteModal" :disabled="isDeleting">
+        <div class="modal-action mt-4">
+          <button class="btn btn-sm btn-ghost rounded-xl" @click="closeDeleteModal" :disabled="isDeleting">
             {{ $t('common.cancel') }}
           </button>
-          <button class="btn btn-error text-white px-6" @click="executeDelete" :disabled="isDeleting">
-            <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span>
-            {{ $t('common.delete') || 'Delete' }}
+          <button class="btn btn-sm btn-error text-white rounded-xl font-semibold px-6" @click="executeDelete" :disabled="isDeleting">
+            <span v-if="isDeleting" class="loading loading-spinner loading-xs"></span>
+            {{ $t('common.delete') }}
           </button>
         </div>
       </div>
-      <form method="dialog" class="modal-backdrop" @click="closeDeleteModal">
-        <button>close</button>
-      </form>
+      <form method="dialog" class="modal-backdrop" @click="closeDeleteModal"><button>close</button></form>
     </dialog>
+
   </div>
   <NoAccess v-else />
 </template>
@@ -185,11 +285,12 @@ import { required, maxLength, helpers } from '@vuelidate/validators';
 import { usePermissionStore } from '@/stores/usePermissionStore';
 import NoAccess from '@/components/NoAccess.vue';
 import TableData from '@/components/TableData.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 
 const { t } = useI18n();
-const mainMenuName = 'Role'
+const mainMenuName = 'Role';
 
 const { data: roleAllFetch, isLoading, error: roleAllFetchError, execute: roleAllFetchApi } = useFetch();
 const { data: menuAvailableData, isLoading: isLoadingMenuAvailable, execute: menuAvailableFetchApi } = useFetch();
@@ -210,9 +311,48 @@ const deleteModal = ref(null);
 const roleToDelete = ref(null);
 const isDeleting = ref(false);
 
+// Dynamic bilingual summary stats
+const statCardsData = computed(() => {
+  const totalRoles = roleTable.value.length;
+  const totalModules = menuAvailables.value.length;
+  
+  let totalActions = 0;
+  menuAvailables.value.forEach(menu => {
+    totalActions += (menu.availableActions?.length || 0);
+    if (menu.submenus) {
+      menu.submenus.forEach(sub => {
+        totalActions += (sub.availableActions?.length || 0);
+      });
+    }
+  });
+
+  return [
+    {
+      label: t('role.stats.total'),
+      value: totalRoles,
+      icon: 'lucide:shield',
+      color: 'primary'
+    },
+    {
+      label: t('role.stats.modules'),
+      value: totalModules,
+      icon: 'lucide:layout-grid',
+      color: 'info',
+      valueClass: 'text-info'
+    },
+    {
+      label: t('role.stats.permissions'),
+      value: totalActions,
+      icon: 'lucide:key',
+      color: 'success',
+      valueClass: 'text-success'
+    }
+  ];
+});
+
 const tableColumns = computed(() => [
   { header: t('common.id'), accessorKey: 'roleId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
-  { header: t('common.roleName'), accessorKey: 'roleName', meta: { headerClass: 'w-20', cellClass: 'font-bold' } },
+  { header: t('common.roleName'), accessorKey: 'roleName', meta: { headerClass: 'w-48', cellClass: 'font-bold' } },
   { header: t('common.actions'), id: 'actions', enableSorting: false, meta: { headerClass: 'text-right', cellClass: 'text-right' } }
 ]);
 
@@ -236,18 +376,15 @@ const menuTranslationMap = {
   'Device Group': 'deviceGroup'
 };
 
-// Helper function to translate Menu names
 const getMenuTranslation = (rawMenuName) => {
   const i18nKey = menuTranslationMap[rawMenuName];
   if (i18nKey) {
     return t(`menu.${i18nKey}`);
   }
-  return rawMenuName; // Fallback to raw DB name if not found
+  return rawMenuName;
 };
 
-// Helper function to translate Action names
 const getActionTranslation = (rawActionName) => {
-  // Convert "Display" to "display" to match the common JSON key
   const safeKey = rawActionName.toLowerCase();
   return t(`common.${safeKey}`);
 };
@@ -323,10 +460,9 @@ const getSortedActions = (actions) => {
     const orderB = orderMap[b.actionName] || 99;
 
     if (orderA !== orderB) {
-      return orderA - orderB; // Sort by the defined priority
+      return orderA - orderB;
     }
     
-    // If neither is in the orderMap (both are 99), sort alphabetically A-Z
     return a.actionName.localeCompare(b.actionName);
   });
 };
@@ -392,7 +528,6 @@ const submitForm = async () => {
   isSaving.value = false;
 };
 
-// --- Delete Functionality ---
 const confirmDelete = (role) => {
   roleToDelete.value = role;
   deleteModal.value.showModal();
@@ -408,13 +543,11 @@ const executeDelete = async () => {
   if (!roleToDelete.value) return;
 
   isDeleting.value = true;
-
-  // Assuming your backend uses a DELETE method and the ID in the URL
   await roleDeleteApi(`/role/delete/${roleToDelete.value.roleId}`, null, 'DELETE');
 
   if (!roleDeleteError.value) {
     toast.success(t('common.messages.deleted') || 'Role deleted successfully');
-    await loadData(); // Refresh the table
+    await loadData();
     closeDeleteModal();
   } else {
     toast.error(handleError(roleDeleteError, 'common.messages.deleteFailed', { item: roleToDelete.value.roleName }));

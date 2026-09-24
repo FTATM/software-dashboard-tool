@@ -1,31 +1,47 @@
 <template>
-  <div class="flex flex-col gap-4 w-full">
+  <div class="flex flex-col gap-3 w-full">
 
-    <div class="flex justify-between items-center w-full">
+    <!-- Table Header Toolbar -->
+    <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 w-full">
 
-      <div v-if="!serverSide" class="flex items-center gap-1 w-full max-w-md">
-        <div class="relative w-full flex-1">
-          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-base-content/50">
+      <!-- Search & Filters -->
+      <div v-if="!serverSide" class="flex items-center gap-2 w-full sm:max-w-md">
+        <div class="relative w-full">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-base-content/40">
             <Icon icon="lucide:search" class="w-4 h-4" />
           </div>
-          <input type="text" v-model="globalFilterText"
-            class="input input-bordered w-full pl-10 focus:border-primary transition-colors shadow-sm"
+          <input 
+            type="text" 
+            v-model="globalFilterText"
+            class="input input-sm h-10 w-full pl-10 pr-9 rounded-xl bg-base-100 border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm shadow-xs"
             :placeholder="$t('tableData.searchPlaceholder')" />
+          <button 
+            v-if="globalFilterText" 
+            @click="globalFilterText = ''"
+            type="button" 
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-base-content/40 hover:text-base-content transition-colors">
+            <Icon icon="lucide:x" class="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div class="join shadow-sm h-[3rem] flex items-center bg-base-100">
+        <!-- Filter Modifiers Toggle Pill -->
+        <div class="flex items-center bg-base-200/80 p-1 rounded-xl border border-base-300 shrink-0 h-10 shadow-xs">
           <div class="tooltip tooltip-bottom" :data-tip="$t('tableData.matchCase')">
-            <button class="join-item btn btn-outline border-base-300 h-[3rem]"
-              :class="{ 'bg-primary text-primary-content border-primary hover:bg-primary/90': matchCase, 'hover:bg-base-200': !matchCase }"
+            <button 
+              type="button"
+              class="btn btn-xs btn-ghost h-8 w-8 p-0 rounded-lg transition-all"
+              :class="matchCase ? 'bg-base-100 text-primary shadow-xs font-bold' : 'text-base-content/50 hover:text-base-content'"
               @click="matchCase = !matchCase">
-              <Icon icon="lucide:case-sensitive" class="w-5 h-5" />
+              <Icon icon="lucide:case-sensitive" class="w-4 h-4" />
             </button>
           </div>
           <div class="tooltip tooltip-bottom" :data-tip="$t('tableData.wholeWord')">
-            <button class="join-item btn btn-outline border-base-300 h-[3rem]"
-              :class="{ 'bg-primary text-primary-content border-primary hover:bg-primary/90': matchWholeWord, 'hover:bg-base-200': !matchWholeWord }"
+            <button 
+              type="button"
+              class="btn btn-xs btn-ghost h-8 w-8 p-0 rounded-lg transition-all"
+              :class="matchWholeWord ? 'bg-base-100 text-primary shadow-xs font-bold' : 'text-base-content/50 hover:text-base-content'"
               @click="matchWholeWord = !matchWholeWord">
-              <Icon icon="lucide:whole-word" class="w-5 h-5" />
+              <Icon icon="lucide:whole-word" class="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -33,67 +49,97 @@
 
       <div v-else></div>
 
-      <div>
+      <!-- Action Buttons Slot -->
+      <div class="flex items-center gap-2 justify-end">
         <slot name="toolbar-actions"></slot>
       </div>
     </div>
 
-    <div class="bg-base-100 rounded-box shadow-sm border border-base-200 overflow-x-auto flex flex-col">
-      <table class="table w-full">
-        <thead class="bg-base-200 text-base-content text-sm">
-          <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+    <!-- Table Container Card -->
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden flex flex-col transition-all">
+      <div class="overflow-x-auto w-full">
+        <table class="table w-full border-collapse">
+          <!-- Table Header -->
+          <thead class="bg-base-200/60 border-b border-base-300 text-base-content/70">
+            <tr v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
+              <th 
+                v-for="header in headerGroup.headers" 
+                :key="header.id" 
+                :class="[
+                  header.column.columnDef.meta?.headerClass,
+                  header.column.getCanSort() ? 'cursor-pointer select-none hover:bg-base-300/50 transition-colors' : '',
+                  'py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider'
+                ]" 
+                @click="header.column.getToggleSortingHandler()?.($event)">
+                <div 
+                  class="flex items-center gap-1.5"
+                  :class="header.column.columnDef.meta?.headerClass?.includes('text-right') ? 'justify-end' : ''">
+                  <FlexRender v-if="!header.isPlaceholder" :header="header" />
+                  <span v-if="header.column.getCanSort()" class="w-4 h-4 flex items-center justify-center shrink-0">
+                    <Icon v-if="header.column.getIsSorted() === 'asc'" icon="lucide:chevron-up" class="w-3.5 h-3.5 text-primary" />
+                    <Icon v-else-if="header.column.getIsSorted() === 'desc'" icon="lucide:chevron-down" class="w-3.5 h-3.5 text-primary" />
+                    <Icon v-else icon="lucide:chevrons-up-down" class="w-3.5 h-3.5 opacity-30" />
+                  </span>
+                </div>
+              </th>
+            </tr>
+          </thead>
 
-            <th v-for="header in headerGroup.headers" :key="header.id" :class="[
-              header.column.columnDef.meta?.headerClass,
-              header.column.getCanSort() ? 'cursor-pointer select-none hover:bg-base-300/50 transition-colors' : ''
-            ]" @click="header.column.getToggleSortingHandler()?.($event)">
-              <div class="flex items-center gap-1"
-                :class="header.column.columnDef.meta?.headerClass?.includes('text-right') ? 'justify-end' : ''">
-                <FlexRender v-if="!header.isPlaceholder" :header="header" />
-                <span v-if="header.column.getCanSort()"
-                  class="w-4 h-4 flex items-center justify-center text-base-content/50">
-                  <Icon v-if="header.column.getIsSorted() === 'asc'" icon="lucide:arrow-up"
-                    class="w-3 h-3 text-primary" />
-                  <Icon v-else-if="header.column.getIsSorted() === 'desc'" icon="lucide:arrow-down"
-                    class="w-3 h-3 text-primary" />
-                  <Icon v-else icon="lucide:arrow-up-down" class="w-3 h-3 opacity-30" />
-                </span>
-              </div>
-            </th>
+          <!-- Table Body -->
+          <tbody class="divide-y divide-base-200 text-sm">
+            <!-- Loading State -->
+            <tr v-if="isLoading">
+              <td :colspan="table.getAllColumns().length" class="text-center py-16">
+                <div class="flex flex-col items-center justify-center gap-2">
+                  <span class="loading loading-spinner loading-md text-primary"></span>
+                  <span class="text-xs font-medium text-base-content/50 tracking-wide">Loading data...</span>
+                </div>
+              </td>
+            </tr>
 
-          </tr>
-        </thead>
+            <!-- Empty State -->
+            <tr v-else-if="table.getRowModel().rows.length === 0">
+              <td :colspan="table.getAllColumns().length" class="text-center py-16">
+                <div class="flex flex-col items-center justify-center gap-2 text-base-content/40">
+                  <div class="p-3 bg-base-200 rounded-full">
+                    <Icon icon="lucide:inbox" class="w-6 h-6" />
+                  </div>
+                  <span class="text-sm font-medium text-base-content/60">{{ $t('tableData.noRecords') }}</span>
+                </div>
+              </td>
+            </tr>
 
-        <tbody>
-          <tr v-if="isLoading">
-            <td :colspan="table.getAllColumns().length" class="text-center py-12">
-              <span class="loading loading-spinner loading-lg text-primary"></span>
-            </td>
-          </tr>
+            <!-- Data Rows -->
+            <tr 
+              v-else
+              v-for="row in table.getRowModel().rows" 
+              :key="row.id" 
+              class="hover:bg-base-200/40 transition-colors">
+              <td 
+                v-for="cell in row.getAllCells()" 
+                :key="cell.id" 
+                :class="[cell.column.columnDef.meta?.cellClass, 'py-3.5 px-4 text-base-content/85 align-middle']">
+                <slot :name="'cell-' + cell.column.id" :row="row.original" :value="cell.getValue()">
+                  <FlexRender :cell="cell" />
+                </slot>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          <tr v-if="table.getRowModel().rows.length === 0 && !isLoading">
-            <td :colspan="table.getAllColumns().length" class="text-center py-12 text-base-content/50">
-              {{ $t('tableData.noRecords') }}
-            </td>
-          </tr>
+      <!-- Footer Pagination -->
+      <div 
+        v-if="!isLoading && table.getPageCount() > 0"
+        class="flex flex-col sm:flex-row items-center justify-between px-5 py-3.5 border-t border-base-200 bg-base-100 gap-4 mt-auto">
 
-          <tr v-for="row in table.getRowModel().rows" :key="row.id" class="hover:bg-base-200/30 transition-colors">
-            <td v-for="cell in row.getAllCells()" :key="cell.id" :class="cell.column.columnDef.meta?.cellClass">
-              <slot :name="'cell-' + cell.column.id" :row="row.original" :value="cell.getValue()">
-                <FlexRender :cell="cell" />
-              </slot>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div v-if="!isLoading && table.getPageCount() > 0"
-        class="flex flex-col lg:flex-row items-center justify-between p-4 border-t border-base-200 bg-base-100 gap-4 mt-auto">
-
-        <div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+        <!-- Left: Page Size & Records Count -->
+        <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start text-xs text-base-content/70">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-base-content/70">{{ $t('tableData.rowsPerPage') }}</span>
-            <select class="select select-bordered select-sm w-20" :value="paginationState.pageSize"
+            <span class="font-medium">{{ $t('tableData.rowsPerPage') }}</span>
+            <select 
+              class="select select-bordered select-xs h-8 px-2 rounded-lg bg-base-100 font-medium" 
+              :value="paginationState.pageSize"
               @change="table.setPageSize(Number($event.target.value))">
               <option :value="10">10</option>
               <option :value="20">20</option>
@@ -102,31 +148,55 @@
             </select>
           </div>
 
-          <span class="text-sm font-medium text-base-content/70 hidden sm:block sm:border-l sm:border-base-300 sm:pl-4">
-            {{ $t('tableData.showing') }} <span class="font-bold text-base-content">{{ startRecord }}</span>
-            {{ $t('tableData.to') }} <span class="font-bold text-base-content">{{ endRecord }}</span>
+          <div class="h-3.5 w-px bg-base-300 hidden sm:block"></div>
+
+          <span class="font-medium text-base-content/60">
+            {{ $t('tableData.showing') }} <span class="font-semibold text-base-content">{{ startRecord }}</span>–<span class="font-semibold text-base-content">{{ endRecord }}</span>
             <template v-if="totalRecords !== null">
-              {{ $t('tableData.of') }} <span class="font-bold text-base-content">{{ totalRecords }}</span>
+              {{ $t('tableData.of') }} <span class="font-semibold text-base-content">{{ totalRecords }}</span>
             </template>
-            {{ $t('tableData.records') }}
           </span>
         </div>
 
-        <div class="flex items-center gap-4">
-          <span class="text-sm font-medium text-base-content/70">
+        <!-- Right: Pagination Buttons -->
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-medium text-base-content/60">
             {{ $t('tableData.page', { current: paginationState.pageIndex + 1, total: table.getPageCount() }) }}
           </span>
-          <div class="join">
-            <button class="join-item btn btn-sm" @click="table.setPageIndex(0)"
-              :disabled="!table.getCanPreviousPage()">«</button>
-            <button class="join-item btn btn-sm" @click="table.previousPage()"
-              :disabled="!table.getCanPreviousPage()">‹</button>
-            <button class="join-item btn btn-sm" @click="table.nextPage()"
-              :disabled="!table.getCanNextPage()">›</button>
-            <button v-if="!serverSide" class="join-item btn btn-sm"
-              @click="table.setPageIndex(table.getPageCount() - 1)" :disabled="!table.getCanNextPage()">»</button>
+
+          <div class="flex items-center gap-1">
+            <button 
+              class="btn btn-ghost btn-xs btn-square rounded-lg border border-base-300 hover:bg-base-200 disabled:opacity-30 disabled:border-transparent" 
+              @click="table.setPageIndex(0)"
+              :disabled="!table.getCanPreviousPage()"
+              title="First Page">
+              <Icon icon="lucide:chevrons-left" class="w-3.5 h-3.5" />
+            </button>
+            <button 
+              class="btn btn-ghost btn-xs btn-square rounded-lg border border-base-300 hover:bg-base-200 disabled:opacity-30 disabled:border-transparent" 
+              @click="table.previousPage()"
+              :disabled="!table.getCanPreviousPage()"
+              title="Previous Page">
+              <Icon icon="lucide:chevron-left" class="w-3.5 h-3.5" />
+            </button>
+            <button 
+              class="btn btn-ghost btn-xs btn-square rounded-lg border border-base-300 hover:bg-base-200 disabled:opacity-30 disabled:border-transparent" 
+              @click="table.nextPage()"
+              :disabled="!table.getCanNextPage()"
+              title="Next Page">
+              <Icon icon="lucide:chevron-right" class="w-3.5 h-3.5" />
+            </button>
+            <button 
+              v-if="!serverSide" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg border border-base-300 hover:bg-base-200 disabled:opacity-30 disabled:border-transparent"
+              @click="table.setPageIndex(table.getPageCount() - 1)" 
+              :disabled="!table.getCanNextPage()"
+              title="Last Page">
+              <Icon icon="lucide:chevrons-right" class="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
+
       </div>
     </div>
   </div>

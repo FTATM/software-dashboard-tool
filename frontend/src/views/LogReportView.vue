@@ -1,133 +1,230 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full mx-auto p-4 flex flex-col h-full gap-4">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
 
-    <!-- Header & Tabs -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:file-text" class="w-7 h-7" />
+    <!-- Anchored Page Header Card with Background & Tabs -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:file-text" class="w-6 h-6" />
         </div>
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('logReport.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('logReport.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span class="text-primary">{{ $t('logReport.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('logReport.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('logReport.subtitle') }}
+          </p>
         </div>
       </div>
 
-      <div class="inline-flex p-1 bg-base-200/60 rounded-xl border border-base-content/10">
-        <button type="button"
-          class="flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200"
-          :class="activeTab === 'system' ? 'bg-base-100 text-primary shadow-sm' : 'text-base-content/70 hover:text-base-content'"
+      <!-- Segmented Log Mode Tabs Switcher -->
+      <div class="inline-flex p-1 bg-base-200/80 rounded-xl border border-base-300 shrink-0 self-stretch sm:self-auto">
+        <button 
+          type="button"
+          class="flex-1 sm:flex-initial flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200"
+          :class="activeTab === 'system' ? 'bg-base-100 text-primary shadow-xs' : 'text-base-content/60 hover:text-base-content'"
           @click="switchTab('system')">
-          <Icon icon="lucide:server" class="w-4 h-4 mr-2" />
+          <Icon icon="lucide:server" class="w-4 h-4 mr-1.5" />
           {{ $t('logReport.tabSystem') }}
         </button>
 
-        <button type="button"
-          class="flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200"
-          :class="activeTab === 'device' ? 'bg-base-100 text-primary shadow-sm' : 'text-base-content/70 hover:text-base-content'"
+        <button 
+          type="button"
+          class="flex-1 sm:flex-initial flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all duration-200"
+          :class="activeTab === 'device' ? 'bg-base-100 text-primary shadow-xs' : 'text-base-content/60 hover:text-base-content'"
           @click="switchTab('device')">
-          <Icon icon="lucide:cpu" class="w-4 h-4 mr-2" />
+          <Icon icon="lucide:cpu" class="w-4 h-4 mr-1.5" />
           {{ $t('logReport.tabDevice') }}
         </button>
       </div>
     </div>
 
-    <!-- Server-Side Filter Menu -->
-    <div class="bg-base-100 shadow-sm rounded-box border border-base-200 p-4">
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
 
-        <label class="form-control w-full">
-          <div class="label pb-1"><span class="label-text font-semibold">{{ $t('logReport.selectStartDate') }}</span>
+    <!-- Server-Side Filter Toolbar Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+
+        <!-- Start Date -->
+        <label class="form-control w-full lg:col-span-3">
+          <div class="label pb-1">
+            <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('logReport.selectStartDate') }}</span>
           </div>
-          <VueDatePicker v-model="filters.from" :is-24="true" auto-apply :preset-dates="presetDates"
-            :locale="dateFnsLocale" :format-locale="dateFnsLocale" :dark="themeStore.isDarkTheme"
-            :formats="{ input: 'dd/MM/yyyy HH:mm' }" :action-row="{
-              selectBtnLabel: $t('common.select'),
-              cancelBtnLabel: $t('common.cancel')
-            }" :placeholder="$t('logReport.selectStartDate')" teleport-center>
+          <VueDatePicker 
+            v-model="filters.from" 
+            :is-24="true" 
+            auto-apply 
+            :preset-dates="presetDates"
+            :locale="dateFnsLocale" 
+            :format-locale="dateFnsLocale" 
+            :dark="themeStore.isDarkTheme"
+            :formats="{ input: 'dd/MM/yyyy HH:mm' }" 
+            :action-row="{ selectBtnLabel: $t('common.select'), cancelBtnLabel:$t('common.cancel') }" 
+            :placeholder="$t('logReport.selectStartDate')" 
+            teleport-center>
             <template #input-icon>
-              <Icon icon="lucide:calendar-clock" class="w-5 h-5 ml-3 text-base-content/50" />
+              <Icon icon="lucide:calendar-clock" class="w-4 h-4 ml-3 text-base-content/50" />
             </template>
           </VueDatePicker>
         </label>
 
-        <label class="form-control w-full">
-          <div class="label pb-1"><span class="label-text font-semibold">{{ $t('logReport.selectEndDate') }}</span>
+        <!-- End Date -->
+        <label class="form-control w-full lg:col-span-3">
+          <div class="label pb-1">
+            <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('logReport.selectEndDate') }}</span>
           </div>
-          <VueDatePicker v-model="filters.to" :is-24="true" auto-apply :preset-dates="presetDates"
-            :locale="dateFnsLocale" :format-locale="dateFnsLocale" :dark="themeStore.isDarkTheme"
-            :formats="{ input: 'dd/MM/yyyy HH:mm' }" :action-row="{
-              selectBtnLabel: $t('common.select'),
-              cancelBtnLabel: $t('common.cancel')
-            }" :placeholder="$t('logReport.selectEndDate')" teleport-center>
+          <VueDatePicker 
+            v-model="filters.to" 
+            :is-24="true" 
+            auto-apply 
+            :preset-dates="presetDates"
+            :locale="dateFnsLocale" 
+            :format-locale="dateFnsLocale" 
+            :dark="themeStore.isDarkTheme"
+            :formats="{ input: 'dd/MM/yyyy HH:mm' }" 
+            :action-row="{ selectBtnLabel: $t('common.select'), cancelBtnLabel:$t('common.cancel') }" 
+            :placeholder="$t('logReport.selectEndDate')" 
+            teleport-center>
             <template #input-icon>
-              <Icon icon="lucide:calendar-clock" class="w-5 h-5 ml-3 text-base-content/50" />
+              <Icon icon="lucide:calendar-clock" class="w-4 h-4 ml-3 text-base-content/50" />
             </template>
           </VueDatePicker>
         </label>
 
-        <!-- Menu Types Dropdown (replaces Entity Types) -->
-        <label v-if="activeTab === 'system'" class="form-control w-full">
-          <div class="label pb-1"><span class="label-text font-semibold">{{ $t('logReport.menuTypes') }}</span></div>
-          <SearchableDropdown v-model="filters.menuTypes" :options="formattedMenuTypes" labelKey="name" valueKey="id"
-            :placeholder="$t('logReport.selectMenus')" multiple />
-        </label>
-
-        <label class="form-control w-full" :class="{ 'md:col-span-2': activeTab !== 'system' }">
-          <div class="label pb-1"><span class="label-text font-semibold">{{ $t('logReport.keywordSearch') }}</span>
+        <!-- Menu Types Dropdown (System Tab Only) -->
+        <label v-if="activeTab === 'system'" class="form-control w-full lg:col-span-2">
+          <div class="label pb-1">
+            <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('logReport.menuTypes') }}</span>
           </div>
-          <input type="text" v-model="filters.keyword" :placeholder="$t('logReport.searchPlaceholder')"
-            class="input input-bordered input-sm w-full h-[3rem]" />
+          <SearchableDropdown 
+            v-model="filters.menuTypes" 
+            :options="formattedMenuTypes" 
+            labelKey="name" 
+            valueKey="id"
+            :placeholder="$t('logReport.selectMenus')" 
+            multiple />
         </label>
 
-        <button @click="fetchLogs(1)" class="btn btn-primary h-[3rem] w-full text-white">
-          <Icon icon="lucide:filter" class="w-4 h-4 mr-1" />
-          {{ $t('logReport.applyFilters') }}
-        </button>
+        <!-- Keyword Search -->
+        <label class="form-control w-full" :class="activeTab === 'system' ? 'lg:col-span-3' : 'lg:col-span-4'">
+          <div class="label pb-1">
+            <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('logReport.keywordSearch') }}</span>
+          </div>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-base-content/40">
+              <Icon icon="lucide:search" class="w-4 h-4" />
+            </div>
+            <input 
+              type="text" 
+              v-model="filters.keyword" 
+              :placeholder="$t('logReport.searchPlaceholder')"
+              @keyup.enter="fetchLogs(1)"
+              class="input input-sm h-10 input-bordered w-full pl-9 rounded-xl text-xs" />
+          </div>
+        </label>
+
+        <!-- Apply Button -->
+        <div class="w-full" :class="activeTab === 'system' ? 'lg:col-span-1' : 'lg:col-span-2'">
+          <button 
+            @click="fetchLogs(1)" 
+            class="btn btn-sm h-10 btn-primary w-full rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white">
+            <Icon icon="lucide:filter" class="w-4 h-4" />
+            <span>{{ $t('logReport.applyFilters') }}</span>
+          </button>
+        </div>
+
       </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="flex-1 flex flex-col min-h-0">
-      <TableData :data="logTableData" :columns="currentColumns" :is-loading="isLoading" :server-side="true"
-        :total-row-count="totalServerRecords" :page-count="computedPageCount" :pagination="tablePagination"
-        @update:pagination="handlePaginationChange" @update:sorting="handleSortingChange">
+    <!-- Data Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="logTableData" 
+        :columns="currentColumns" 
+        :is-loading="isLoading" 
+        :server-side="true"
+        :total-row-count="totalServerRecords" 
+        :page-count="computedPageCount" 
+        :pagination="tablePagination"
+        @update:pagination="handlePaginationChange" 
+        @update:sorting="handleSortingChange">
+        
+        <!-- Toolbar Actions: Colored Export Button -->
         <template #toolbar-actions>
           <div class="dropdown dropdown-end">
-            <div tabindex="0" role="button" class="btn btn-outline btn-secondary shadow-sm transition-all">
-              <span v-if="isExporting" class="loading loading-spinner loading-sm"></span>
-              <Icon v-else icon="lucide:download" class="w-5 h-5 mr-1" />
+            <div 
+              tabindex="0" 
+              role="button" 
+              class="btn btn-sm btn-outline btn-secondary rounded-xl shadow-xs hover:shadow-sm transition-all font-medium">
+              <span v-if="isExporting" class="loading loading-spinner loading-xs"></span>
+              <Icon v-else icon="lucide:download" class="w-4 h-4 mr-1" />
               {{ $t('common.export') }}
             </div>
-            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32">
-              <li><a @click="exportData('json')">JSON</a></li>
-              <li><a @click="exportData('csv')">CSV</a></li>
-              <li><a @click="exportData('excel')">Excel</a></li>
+            <ul tabindex="0" class="dropdown-content z-50 menu p-1.5 shadow-xl bg-base-100 rounded-xl border border-base-300 w-36 mt-1 text-xs font-medium">
+              <li><a @click="exportData('json')" class="rounded-lg py-1.5">JSON</a></li>
+              <li><a @click="exportData('csv')" class="rounded-lg py-1.5">CSV</a></li>
+              <li><a @click="exportData('excel')" class="rounded-lg py-1.5">Excel</a></li>
             </ul>
           </div>
         </template>
 
+        <!-- Action Badge -->
         <template #cell-action="{ value }">
-          <div class="badge badge-sm font-bold uppercase" :class="{
-            'badge-success text-white': value === 'CREATE',
-            'badge-info text-white': value === 'UPDATE',
-            'badge-error text-white': value === 'DELETE',
-            'badge-secondary text-white': value === 'QUERY'
-          }">
+          <span 
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider"
+            :class="{
+              'bg-success/10 text-success border border-success/20': value === 'CREATE',
+              'bg-info/10 text-info border border-info/20': value === 'UPDATE',
+              'bg-error/10 text-error border border-error/20': value === 'DELETE',
+              'bg-secondary/10 text-secondary border border-secondary/20': value === 'QUERY'
+            }">
             {{ value }}
-          </div>
+          </span>
         </template>
 
+        <!-- Created At Timestamp -->
         <template #cell-createdAt="{ value }">
-          <span class="text-sm font-mono text-base-content/70">{{ formatTime(value) }}</span>
+          <span class="font-mono text-xs text-base-content/70">{{ formatTime(value) }}</span>
         </template>
 
+        <!-- Received At Timestamp -->
         <template #cell-receivedAt="{ value }">
-          <span class="text-sm font-mono text-base-content/70">{{ formatTime(value) }}</span>
+          <span class="font-mono text-xs text-base-content/70">{{ formatTime(value) }}</span>
+        </template>
+
+        <!-- Entity ID Cell -->
+        <template #cell-entityId="{ value }">
+          <span v-if="value" class="font-mono text-xs font-bold text-base-content/50">#{{ value }}</span>
+          <span v-else class="text-base-content/30 text-xs font-mono">-</span>
+        </template>
+
+        <!-- Device ID Cell -->
+        <template #cell-deviceId="{ value }">
+          <span class="font-mono text-xs font-bold text-base-content/50">#{{ value }}</span>
+        </template>
+
+        <!-- Username Cell -->
+        <template #cell-username="{ value }">
+          <span v-if="value" class="font-mono text-xs font-medium text-base-content/80">@{{ value }}</span>
+          <span v-else class="text-base-content/30 text-xs font-mono">-</span>
+        </template>
+
+        <!-- Value Data Cell -->
+        <template #cell-valueData="{ value }">
+          <span class="font-mono font-semibold text-xs text-base-content">{{ value ?? '-' }}</span>
         </template>
       </TableData>
     </div>
+
   </div>
   <NoAccess v-else />
 </template>
@@ -143,6 +240,7 @@ import { usePermissionStore } from '@/stores/usePermissionStore';
 import TableData from '@/components/TableData.vue';
 import NoAccess from '@/components/NoAccess.vue';
 import SearchableDropdown from '@/components/SearchableDropdown.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 import { useFormatter } from '@/composables/useFormatter';
@@ -177,6 +275,75 @@ const filters = ref({
   menuTypes: [],
   page: 1,
   limit: 50
+});
+
+// Dynamic bilingual summary stats for StatCardGroup
+const statCardsData = computed(() => {
+  const isSystem = activeTab.value === 'system';
+  const totalLogs = totalServerRecords.value;
+  const currentCount = logTableData.value.length;
+
+  if (isSystem) {
+    return [
+      {
+        label: t('logReport.stats.totalLogs'),
+        value: totalLogs.toLocaleString(),
+        icon: 'lucide:file-text',
+        color: 'primary'
+      },
+      {
+        label: t('logReport.stats.pageLogs'),
+        value: currentCount,
+        icon: 'lucide:list',
+        color: 'info',
+        valueClass: 'text-info'
+      },
+      {
+        label: t('logReport.stats.systemMenus'),
+        value: menuTypesList.value.length,
+        icon: 'lucide:layers',
+        color: 'accent'
+      },
+      {
+        label: t('logReport.stats.mode'),
+        value: t('logReport.stats.systemScope'),
+        icon: 'lucide:shield-alert',
+        color: 'success',
+        valueClass: 'text-success text-base sm:text-lg'
+      }
+    ];
+  } else {
+    const uniqueDevices = new Set(logTableData.value.map(d => d.deviceId)).size;
+
+    return [
+      {
+        label: t('logReport.stats.totalLogs'),
+        value: totalLogs.toLocaleString(),
+        icon: 'lucide:file-text',
+        color: 'primary'
+      },
+      {
+        label: t('logReport.stats.pageLogs'),
+        value: currentCount,
+        icon: 'lucide:list',
+        color: 'info',
+        valueClass: 'text-info'
+      },
+      {
+        label: t('logReport.stats.uniqueDevices'),
+        value: uniqueDevices,
+        icon: 'lucide:cpu',
+        color: 'accent'
+      },
+      {
+        label: t('logReport.stats.mode'),
+        value: t('logReport.stats.deviceScope'),
+        icon: 'lucide:radio',
+        color: 'success',
+        valueClass: 'text-success text-base sm:text-lg'
+      }
+    ];
+  }
 });
 
 const tablePagination = computed(() => ({

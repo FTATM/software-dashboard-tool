@@ -1,6 +1,6 @@
 <template>
   <div v-if="hasPermission(mainMenuName, 'Display')"
-    class="flex flex-col h-screen w-full relative overflow-hidden transition-colors duration-500"
+    class="flex flex-col h-full w-full relative overflow-hidden transition-colors duration-500"
     :style="activeCanvasStyle">
 
     <!-- Top Control Bar -->
@@ -29,8 +29,9 @@
 
     </div>
 
-    <div class="flex-1 w-full px-6 pb-6 overflow-y-auto">
-      <div class="flex-1 min-h-[500px] w-full">
+    <!-- Scrollable Grid Viewport -->
+    <div class="flex-1 min-h-0 w-full px-6 overflow-y-auto">
+      <div class="min-h-[500px] w-full pb-2">
         <GridLayout v-model:layout="activeLayout" :col-num="12" :row-height="30" :is-draggable="false"
           :is-resizable="false" :vertical-compact="false">
           <GridItem v-for="item in activeLayout" :key="item.i" :x="item.x" :y="item.y" :w="item.w" :h="item.h"
@@ -315,6 +316,4 @@ onMounted(async () => {
 onUnmounted(() => {
   liveStreamStore.disconnect();
 });
-
-
 </script>

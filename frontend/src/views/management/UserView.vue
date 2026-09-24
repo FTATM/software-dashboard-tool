@@ -1,210 +1,310 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
-    <!-- Page Header Card -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:users" class="w-7 h-7" />
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
+    
+    <!-- Anchored Page Header Card with Background -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:users" class="w-6 h-6" />
         </div>
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('user.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('user.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span>{{ $t('menu.management') }}</span>
+            <Icon icon="lucide:chevron-right" class="w-3.5 h-3.5" />
+            <span class="text-primary">{{ $t('user.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('user.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('user.subtitle') }}
+          </p>
         </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button 
+          @click="setupData" 
+          class="btn btn-sm btn-ghost border border-base-300 bg-base-100 hover:bg-base-200 rounded-xl gap-1.5 text-xs font-semibold shadow-xs transition-all"
+          :title="$t('common.refresh')">
+          <Icon icon="lucide:refresh-cw" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
+          <span>{{ $t('common.refresh') }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Users Table -->
-    <TableData :data="userTable" :columns="tableColumns" :initial-sorting="[{ id: 'userId', desc: false }]"
-      :is-loading="isLoading">
-      <template #toolbar-actions>
-        <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
-          <Icon icon="lucide:plus" class="w-5 h-5" />
-          {{ $t('user.addUser') }}
-        </button>
-      </template>
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
 
-      <template #cell-firstName="{ row }">
-        <span class="font-medium">{{ row.firstName }} {{ row.lastName }}</span>
-      </template>
-
-      <template #cell-roleId="{ value }">
-        <span class="badge badge-outline badge-primary badge-sm font-semibold">
-          {{ getRoleName(value) }}
-        </span>
-      </template>
-
-      <template #cell-active="{ value }">
-        <span :class="['badge', value ? 'badge-success text-success-content' : 'badge-ghost']">
-          {{ value ? $t('common.active') : $t('common.disabled') }}
-        </span>
-      </template>
-
-      <template #cell-actions="{ row }">
-        <div class="flex justify-end gap-2">
-          <button @click="openEditModal(row)" class="btn btn-sm btn-primary">
-            <Icon icon="lucide:pencil" class="w-5 h-5" />
+    <!-- Main Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="userTable" 
+        :columns="tableColumns" 
+        :initial-sorting="[{ id: 'userId', desc: false }]"
+        :is-loading="isLoading">
+        
+        <!-- Toolbar Actions -->
+        <template #toolbar-actions>
+          <button 
+            class="btn btn-sm btn-primary rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white" 
+            @click="openCreateModal">
+            <Icon icon="lucide:plus" class="w-4 h-4" />
+            {{ $t('user.addUser') }}
           </button>
-          <button @click="openDeleteModal(row)" class="btn btn-sm btn-error text-white">
-            <Icon icon="lucide:trash-2" class="w-5 h-5" />
-          </button>
-        </div>
-      </template>
-    </TableData>
+        </template>
 
-    <!-- Create/Edit Modal -->
+        <!-- ID Cell -->
+        <template #cell-userId="{ value }">
+          <span class="font-mono text-xs font-bold text-base-content/50">#{{ value }}</span>
+        </template>
+
+        <!-- Full Name -->
+        <template #cell-firstName="{ row }">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+              {{ (row.firstName?.[0] || 'U').toUpperCase() }}
+            </div>
+            <div class="flex flex-col">
+              <span class="font-semibold text-base-content tracking-tight text-sm">
+                {{ row.firstName }} {{ row.lastName }}
+              </span>
+              <span v-if="row.tel" class="text-[11px] text-base-content/50 font-mono">
+                {{ row.tel }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Username Cell -->
+        <template #cell-username="{ value }">
+          <span class="font-mono text-xs font-medium text-base-content/80">@{{ value }}</span>
+        </template>
+
+        <!-- Email Cell -->
+        <template #cell-email="{ value }">
+          <span v-if="value" class="text-xs text-base-content/80">{{ value }}</span>
+          <span v-else class="text-base-content/30 text-xs font-mono">-</span>
+        </template>
+
+        <!-- Role Badge -->
+        <template #cell-roleId="{ value }">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-base-200 border border-base-300 text-xs font-semibold text-base-content/80">
+            {{ getRoleName(value) }}
+          </span>
+        </template>
+
+        <!-- Live Status Dot Indicator -->
+        <template #cell-active="{ value }">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            :class="value ? 'bg-success/10 text-success border border-success/20' : 'bg-base-200 text-base-content/50 border border-base-300'">
+            <span class="w-1.5 h-1.5 rounded-full" :class="value ? 'bg-success animate-pulse' : 'bg-base-content/30'"></span>
+            {{ value ? $t('common.active') :$t('common.disabled') }}
+          </div>
+        </template>
+
+        <!-- Minimal Icon Actions -->
+        <template #cell-actions="{ row }">
+          <div class="flex justify-end items-center gap-1">
+            <button 
+              @click="openEditModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              :title="$t('common.edit')">
+              <Icon icon="lucide:pencil" class="w-4 h-4" />
+            </button>
+            <button 
+              @click="openDeleteModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-error hover:bg-error/10 transition-colors"
+              :title="$t('common.delete')">
+              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
+      </TableData>
+    </div>
+
+    <!-- Create/Edit Modal with Scrollable Body -->
     <dialog ref="userModal" class="modal">
-      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl">
-        <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center">
-          <h3 class="m-0 text-xl font-extrabold text-base-content">
-            {{ isEditing ? $t('user.editUser') : $t('user.createUser') }}
-          </h3>
+      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[85vh] border border-base-300 bg-base-100">
+        <!-- Pinned Header -->
+        <div class="px-6 py-4 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-primary/10 text-primary">
+              <Icon :icon="isEditing ? 'lucide:pencil' : 'lucide:user-plus'" class="w-5 h-5" />
+            </div>
+            <div>
+              <h3 class="m-0 text-lg font-bold text-base-content">
+                {{ isEditing ? $t('user.editUser') :$t('user.createUser') }}
+              </h3>
+              <p class="m-0 text-xs text-base-content/50">
+                {{ isEditing ? $t('user.editSubtitle') :$t('user.createSubtitle') }}
+              </p>
+            </div>
+          </div>
           <button class="btn btn-sm btn-circle btn-ghost" @click="closeModal">
             <Icon icon="lucide:x" class="w-4 h-4" />
           </button>
         </div>
 
-        <form @submit.prevent="submitForm" autocomplete="off" class="p-6 bg-base-100">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1">
-            <!-- First Name -->
+        <!-- Form Wrapper -->
+        <form @submit.prevent="submitForm" autocomplete="off" class="flex flex-col flex-1 overflow-hidden bg-base-100">
+          <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- First Name -->
+              <label class="form-control w-full">
+                <div class="label pb-1 flex justify-between">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.firstName') }}</span>
+                  <span class="label-text-alt text-base-content/50 font-mono text-[11px]">{{ form.firstName?.length || 0 }}/50</span>
+                </div>
+                <input type="text" v-model="form.firstName" maxlength="50" placeholder="Jane"
+                  @blur="v$.firstName.$touch()"
+                  :class="['input input-sm h-10 input-bordered w-full rounded-xl', { 'input-error': v$.firstName.$error }]" />
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.firstName.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.firstName.$errors[0].$message }}
+                  </span>
+                </div>
+              </label>
+
+              <!-- Last Name -->
+              <label class="form-control w-full">
+                <div class="label pb-1 flex justify-between">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.lastName') }}</span>
+                  <span class="label-text-alt text-base-content/50 font-mono text-[11px]">{{ form.lastName?.length || 0 }}/50</span>
+                </div>
+                <input type="text" v-model="form.lastName" maxlength="50" placeholder="Doe" @blur="v$.lastName.$touch()"
+                  :class="['input input-sm h-10 input-bordered w-full rounded-xl', { 'input-error': v$.lastName.$error }]" />
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.lastName.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.lastName.$errors[0].$message }}
+                  </span>
+                </div>
+              </label>
+
+              <!-- Email -->
+              <label class="form-control w-full">
+                <div class="label pb-1">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.email') }}</span>
+                </div>
+                <input type="email" v-model="form.email" placeholder="jane@example.com" @blur="v$.email.$touch()"
+                  :class="['input input-sm h-10 input-bordered w-full rounded-xl', { 'input-error': v$.email.$error }]" />
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.email.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.email.$errors[0].$message }}
+                  </span>
+                </div>
+              </label>
+
+              <!-- Telephone -->
+              <label class="form-control w-full">
+                <div class="label pb-1">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.phone') }}</span>
+                </div>
+                <input type="tel" v-model="form.tel" placeholder="+66 81 234 5678" class="input input-sm h-10 input-bordered w-full rounded-xl" />
+                <div class="label px-1 py-0.5 min-h-[20px]"></div>
+              </label>
+            </div>
+
+            <!-- Username -->
             <label class="form-control w-full">
-              <div class="label pb-1 flex justify-between">
-                <span class="label-text font-semibold">{{ $t('user.firstName') }}</span>
-                <span class="label-text-alt text-base-content/60 font-mono">{{ form.firstName?.length || 0 }}/50</span>
+              <div class="label pb-1 flex justify-between items-end">
+                <div class="flex items-center gap-1.5">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.username') }}</span>
+                  <span v-if="isEditing" class="badge badge-ghost text-[10px] py-0.5 px-1.5">{{ $t('common.readOnly') }}</span>
+                </div>
+                <span class="label-text-alt text-base-content/50 font-mono text-[11px]">{{ form.username?.length || 0 }}/31</span>
               </div>
-              <input type="text" v-model="form.firstName" maxlength="50" placeholder="Jane"
-                @blur="v$.firstName.$touch()"
-                :class="['input input-bordered w-full', { 'input-error': v$.firstName.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.firstName.$error" class="label-text-alt text-error font-medium">
-                  {{ v$.firstName.$errors[0].$message }}
+              <input type="text" v-model="form.username" maxlength="31" placeholder="jdoe" @blur="v$.username.$touch()"
+                :disabled="isEditing" autocomplete="none"
+                :class="['input input-sm h-10 input-bordered w-full rounded-xl disabled:bg-base-200/50 disabled:text-base-content/50', { 'input-error': v$.username.$error }]" />
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.username.$error" class="label-text-alt text-error font-medium text-xs">
+                  {{ v$.username.$errors[0].$message }}
                 </span>
               </div>
             </label>
 
-            <!-- Last Name -->
-            <label class="form-control w-full">
-              <div class="label pb-1 flex justify-between">
-                <span class="label-text font-semibold">{{ $t('user.lastName') }}</span>
-                <span class="label-text-alt text-base-content/60 font-mono">{{ form.lastName?.length || 0 }}/50</span>
-              </div>
-              <input type="text" v-model="form.lastName" maxlength="50" placeholder="Doe" @blur="v$.lastName.$touch()"
-                :class="['input input-bordered w-full', { 'input-error': v$.lastName.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.lastName.$error" class="label-text-alt text-error font-medium">{{
-                  v$.lastName.$errors[0].$message }}</span>
-              </div>
-            </label>
-
-            <!-- Email -->
-            <label class="form-control w-full">
-              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('user.email') }}</span></div>
-              <input type="email" v-model="form.email" placeholder="jane@example.com" @blur="v$.email.$touch()"
-                :class="['input input-bordered w-full', { 'input-error': v$.email.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.email.$error" class="label-text-alt text-error font-medium">{{
-                  v$.email.$errors[0].$message
-                  }}</span>
-              </div>
-            </label>
-
-            <!-- Telephone -->
-            <label class="form-control w-full">
-              <div class="label pb-1"><span class="label-text font-semibold">{{ $t('user.phone') }}</span></div>
-              <input type="tel" v-model="form.tel" placeholder="+66 81 234 5678" class="input input-bordered w-full" />
-              <div class="label px-1 py-1 h-6"></div>
-            </label>
-
-            <!-- Username -->
-            <label class="form-control w-full sm:col-span-2">
-              <div class="label pb-1 flex justify-between items-end">
-                <div>
-                  <span class="label-text font-semibold">{{ $t('user.username') }}</span>
-                  <span v-if="isEditing" class="badge badge-neutral badge-sm ml-2">{{ $t('common.readOnly') }}</span>
-                </div>
-                <span class="label-text-alt text-base-content/60 font-mono">{{ form.username?.length || 0 }}/31</span>
-              </div>
-              <input type="text" v-model="form.username" maxlength="31" placeholder="jdoe" @blur="v$.username.$touch()"
-                :disabled="isEditing" autocomplete="none"
-                :class="['input input-bordered w-full disabled:bg-base-200/50 disabled:text-base-content/60', { 'input-error': v$.username.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.username.$error" class="label-text-alt text-error font-medium">
-                  {{ v$.username.$errors[0].$message }}</span>
-              </div>
-            </label>
-
             <!-- Password -->
-            <label class="form-control w-full sm:col-span-2">
-              <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('user.password') }}</span>
-                <span v-if="isEditing" class="label-text-alt text-info font-medium">{{ $t('user.passwordHint') }}</span>
+            <label class="form-control w-full">
+              <div class="label pb-1 flex justify-between items-center">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.password') }}</span>
+                <span v-if="isEditing" class="label-text-alt text-info font-medium text-xs">{{ $t('user.passwordHint') }}</span>
               </div>
               <input type="password" v-model="form.password" @blur="v$.password.$touch()" placeholder="••••••••"
                 autocomplete="new-password" spellcheck="false"
-                :class="['input input-bordered w-full', { 'input-error': v$.password.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.password.$error" class="label-text-alt text-error font-medium">{{
-                  v$.password.$errors[0].$message }}</span>
+                :class="['input input-sm h-10 input-bordered w-full rounded-xl', { 'input-error': v$.password.$error }]" />
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.password.$error" class="label-text-alt text-error font-medium text-xs">
+                  {{ v$.password.$errors[0].$message }}
+                </span>
               </div>
             </label>
 
-            <!-- Line Token Input -->
-            <label class="form-control w-full sm:col-span-2 mb-2">
+            <!-- Role Assignment -->
+            <label class="form-control w-full relative">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('user.lineToken') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.assignedRole') }}</span>
+                <span class="label-text-alt text-error">*</span>
               </div>
-              <div class="flex gap-2">
-                <input type="text" :value="form.lineUserToken ? `${form.lineUserToken.slice(0, 8)}...` : ''"
-                  :placeholder="$t('user.lineToken')" disabled
-                  class="input input-bordered w-full disabled:bg-base-200/50 disabled:text-base-content/60" />
+              <SearchableDropdown v-model="form.roleId" :options="Array.from(rolesMaster.values())" label-key="roleName"
+                value-key="roleId" :placeholder="$t('common.searchRole')" :error="v$.roleId.$error"
+                @blur="v$.roleId.$touch()" />
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.roleId.$error" class="label-text-alt text-error font-medium text-xs">
+                  {{ v$.roleId.$errors[0].$message }}
+                </span>
+              </div>
+            </label>
 
-                <!-- Unlink button sets local flag and clears field without calling an API yet -->
+            <!-- Line Token Integration Box -->
+            <div class="p-4 bg-base-200/50 rounded-2xl border border-base-300 flex flex-col gap-2">
+              <span class="font-bold text-xs uppercase tracking-wider text-base-content/70">{{ $t('user.lineToken') }}</span>
+              <div class="flex gap-2">
+                <input type="text" :value="form.lineUserToken ? `${form.lineUserToken.slice(0, 10)}...` : ''"
+                  :placeholder="$t('user.lineToken')" disabled
+                  class="input input-sm h-10 input-bordered w-full rounded-xl disabled:bg-base-100 disabled:text-base-content/60 font-mono text-xs" />
+
+                <!-- Unlink LINE -->
                 <button v-if="isEditing && form.lineUserToken" type="button" @click="handleUnlinkLine"
-                  class="btn btn-error btn-outline shrink-0 gap-1.5">
-                  <Icon icon="lucide:unlink" class="w-4 h-4" />
-                  {{ $t('user.unlinkLine') || 'Unlink LINE' }}
+                  class="btn btn-sm btn-error btn-outline rounded-xl shrink-0 gap-1 text-xs">
+                  <Icon icon="lucide:unlink" class="w-3.5 h-3.5" />
+                  {{ $t('user.unlinkLine') || 'Unlink' }}
                 </button>
 
                 <!-- Connect LINE / QR Code Button -->
                 <button type="button" @click="openLineQrCode"
-                  class="btn bg-[#06c755] hover:bg-[#05a546] text-white border-none shrink-0">
-                  <Icon icon="lucide:qr-code" class="w-5 h-5 mr-1" />
+                  class="btn btn-sm bg-[#06c755] hover:bg-[#05a546] text-white border-none rounded-xl shrink-0 gap-1 text-xs font-semibold">
+                  <Icon icon="bi:line" class="w-4 h-4" />
                   {{ $t('user.connectLine') }}
                 </button>
               </div>
-            </label>
+            </div>
+
+            <!-- Active Status Box -->
+            <div class="p-4 bg-base-200/50 rounded-2xl border border-base-300 mt-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-base-content m-0 text-sm">{{ $t('user.accountStatus') }}</p>
+                  <p class="text-xs text-base-content/60 m-0 mt-0.5">{{ $t('user.accountStatusDesc') }}</p>
+                </div>
+                <input type="checkbox" v-model="form.active" class="toggle toggle-primary toggle-sm" />
+              </div>
+            </div>
+
           </div>
 
-          <!-- Role Assignment -->
-          <label class="form-control w-full sm:col-span-2 relative">
-            <div class="label pb-1">
-              <span class="label-text font-semibold">{{ $t('user.assignedRole') }}</span>
-              <span class="label-text-alt text-error">*</span>
-            </div>
-            <SearchableDropdown v-model="form.roleId" :options="Array.from(rolesMaster.values())" label-key="roleName"
-              value-key="roleId" :placeholder="$t('common.searchRole')" :error="v$.roleId.$error"
-              @blur="v$.roleId.$touch()" />
-            <div class="label px-1 py-1 h-6">
-              <span v-if="v$.roleId.$error" class="label-text-alt text-error font-medium">{{
-                v$.roleId.$errors[0].$message
-                }}</span>
-            </div>
-          </label>
-
-          <!-- Active Toggle -->
-          <div class="mt-2 p-5 bg-base-200/40 rounded-xl border border-base-200 flex items-center justify-between">
-            <div>
-              <p class="font-bold text-base-content m-0 text-sm">{{ $t('user.accountStatus') }}</p>
-              <p class="text-xs text-base-content/60 m-0 mt-1">{{ $t('user.accountStatusDesc') }}</p>
-            </div>
-            <input type="checkbox" v-model="form.active" class="toggle toggle-success toggle-lg" />
-          </div>
-
-          <!-- Footer -->
-          <div class="border-t border-base-200 mt-6 pt-5 flex justify-end gap-3">
-            <button type="button" class="btn btn-ghost" @click="closeModal">{{ $t('common.cancel') }}</button>
-            <button type="submit" class="btn btn-primary px-8">
-              {{ isEditing ? $t('common.save') : $t('user.createUser') }}
+          <!-- Pinned Footer -->
+          <div class="border-t border-base-200 p-4 px-6 flex justify-end gap-2 shrink-0 bg-base-100">
+            <button type="button" class="btn btn-sm btn-ghost rounded-xl" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-sm btn-primary rounded-xl px-6 text-white font-semibold">
+              {{ isEditing ? $t('common.save') :$t('user.createUser') }}
             </button>
           </div>
         </form>
@@ -214,11 +314,11 @@
 
     <!-- Line QR Code Modal -->
     <dialog ref="lineQrModal" class="modal z-[210]">
-      <div class="modal-box max-w-sm p-6 text-center shadow-2xl">
+      <div class="modal-box max-w-sm p-6 text-center shadow-2xl rounded-2xl border border-base-300 bg-base-100">
         <div class="flex justify-between items-center mb-4">
           <div class="flex items-center gap-2">
             <Icon icon="bi:line" class="w-6 h-6 text-[#06c755]" />
-            <h3 class="text-lg font-bold text-base-content">{{ $t('user.lineQrTitle') }}</h3>
+            <h3 class="text-base font-bold text-base-content m-0">{{ $t('user.lineQrTitle') }}</h3>
           </div>
           <button class="btn btn-sm btn-circle btn-ghost" @click="closeLineQrModal">
             <Icon icon="lucide:x" class="w-4 h-4" />
@@ -232,7 +332,7 @@
         <!-- QR Display if URL exists -->
         <template v-if="lineAddFriendUrl">
           <div class="flex justify-center p-4 bg-white rounded-2xl border border-base-300 w-fit mx-auto shadow-inner">
-            <QrcodeVue :value="lineAddFriendUrl" :size="190" level="H" render-as="svg" />
+            <QrcodeVue :value="lineAddFriendUrl" :size="180" level="H" render-as="svg" />
           </div>
 
           <div class="mt-4 pt-3 border-t border-base-200 space-y-2">
@@ -241,7 +341,7 @@
             </p>
 
             <a :href="lineAddFriendUrl" target="_blank" rel="noopener noreferrer"
-              class="btn bg-[#06c755] hover:bg-[#05a546] text-white btn-sm w-full gap-2 mt-1 border-none shadow-sm">
+              class="btn bg-[#06c755] hover:bg-[#05a546] text-white btn-sm rounded-xl w-full gap-2 mt-1 border-none shadow-xs font-semibold">
               <Icon icon="bi:line" class="w-4 h-4" />
               {{ $t('user.openDirectlyInLine') }}
             </a>
@@ -260,24 +360,25 @@
 
     <!-- Delete Modal -->
     <dialog ref="deleteModal" class="modal z-[200]">
-      <div class="modal-box">
+      <div class="modal-box rounded-2xl border border-base-300 p-6">
         <h3 class="font-bold text-lg text-error flex items-center gap-2">
-          <Icon icon="lucide:alert-triangle" class="w-6 h-6" /> {{ $t('common.confirmDelete') }}
+          <Icon icon="lucide:alert-triangle" class="w-5 h-5" /> {{ $t('common.confirmDelete') }}
         </h3>
-        <p class="py-4 text-base-content/80">
+        <p class="py-3 text-sm text-base-content/80">
           {{ $t('user.deleteWarning', { name: userToDelete?.username }) }}
         </p>
-        <div class="modal-action">
-          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
+        <div class="modal-action mt-4">
+          <button type="button" @click="closeDeleteModal" class="btn btn-sm btn-ghost rounded-xl" :disabled="isDeleting">
             {{ $t('common.cancel') }}
           </button>
-          <button type="button" @click="confirmDelete" class="btn btn-error text-white" :disabled="isDeleting">
-            <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span> {{ $t('common.delete') }}
+          <button type="button" @click="confirmDelete" class="btn btn-sm btn-error text-white rounded-xl font-semibold" :disabled="isDeleting">
+            <span v-if="isDeleting" class="loading loading-spinner loading-xs"></span> {{ $t('common.delete') }}
           </button>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button @click="closeDeleteModal">close</button></form>
     </dialog>
+
   </div>
   <NoAccess v-else />
 </template>
@@ -296,6 +397,7 @@ import { usePermissionStore } from '@/stores/usePermissionStore';
 import NoAccess from '@/components/NoAccess.vue';
 import SearchableDropdown from '@/components/SearchableDropdown.vue';
 import TableData from '@/components/TableData.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 
@@ -321,6 +423,44 @@ const userTable = ref([]);
 const deleteModal = ref(null);
 const userToDelete = ref(null);
 const rolesMaster = ref(new Map());
+
+// Dynamic bilingual configuration for StatCardGroup
+const statCardsData = computed(() => {
+  const total = userTable.value.length;
+  const active = userTable.value.filter(u => u.active).length;
+  const inactive = total - active;
+  const lineConnected = userTable.value.filter(u => u.lineUserToken).length;
+
+  return [
+    {
+      label: t('user.stats.total'),
+      value: total,
+      icon: 'lucide:users',
+      color: 'primary'
+    },
+    {
+      label: t('user.stats.active'),
+      value: active,
+      icon: 'lucide:user-check',
+      color: 'success',
+      valueClass: 'text-success'
+    },
+    {
+      label: t('user.stats.disabled'),
+      value: inactive,
+      icon: 'lucide:user-x',
+      color: inactive > 0 ? 'warning' : 'ghost',
+      valueClass: inactive > 0 ? 'text-warning' : 'text-base-content/50'
+    },
+    {
+      label: t('user.stats.lineLinked'),
+      value: lineConnected,
+      icon: 'bi:line',
+      color: 'line', // Uses custom LINE color (#06c755)
+      valueClass: 'text-[#06c755]'
+    }
+  ];
+});
 
 const tableColumns = computed(() => [
   { header: t('common.id'), accessorKey: 'userId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
@@ -390,7 +530,6 @@ const botHandle = computed(() => {
   return parts[parts.length - 1] || '-';
 });
 
-// Clear token locally and flag for deletion on submit
 const handleUnlinkLine = () => {
   form.value.lineUserToken = '';
 };

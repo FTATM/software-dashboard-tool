@@ -1,190 +1,264 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
 
-    <!-- Page Header Card -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:calendar-clock" class="w-7 h-7" />
+    <!-- Anchored Page Header Card with Background -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:calendar-clock" class="w-6 h-6" />
         </div>
 
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('scheduler.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('scheduler.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span class="text-primary">{{ $t('scheduler.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('scheduler.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('scheduler.subtitle') }}
+          </p>
         </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button 
+          @click="loadData" 
+          class="btn btn-sm btn-ghost border border-base-300 bg-base-100 hover:bg-base-200 rounded-xl gap-1.5 text-xs font-semibold shadow-xs transition-all"
+          :title="$t('common.refresh')">
+          <Icon icon="lucide:refresh-cw" class="w-3.5 h-3.5" :class="{ 'animate-spin': isSchedulesLoading }" />
+          <span>{{ $t('common.refresh') }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Data Table -->
-    <TableData :data="schedules" :columns="tableColumns" :is-loading="isSchedulesLoading"
-      :initial-sorting="[{ id: 'status', desc: false }]">
-      <template #toolbar-actions>
-        <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
-          <Icon icon="lucide:plus" class="w-5 h-5 stroke-[3]" />
-          {{ $t('scheduler.addSchedule') }}
-        </button>
-      </template>
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
 
-      <template #cell-scheduleId="{ value }">
-        <div class="tooltip tooltip-right" :class="copiedId === value ? 'tooltip-success' : ''"
-          :data-tip="copiedId === value ? 'Copied!' : 'Copy ID'">
-          <div @click="copyToClipboard(value)"
-            class="max-w-[100px] md:max-w-[130px] truncate font-mono text-[11px] text-base-content/50 cursor-pointer hover:text-primary transition-colors">
-            {{ value }}
-          </div>
-
-        </div>
-      </template>
-
-      <template #cell-target="{ row }">
-        <div v-if="row.deviceGroupId" class="flex items-center gap-2">
-          <div class="p-1.5 bg-secondary/10 rounded-md">
-            <Icon icon="lucide:layers" class="w-4 h-4 text-secondary" />
-          </div>
-          <span class="font-semibold">{{ getGroupName(row.deviceGroupId) }}</span>
-        </div>
-        <div v-else-if="row.deviceId" class="flex items-center gap-2">
-          <div class="p-1.5 bg-primary/10 rounded-md">
-            <Icon icon="lucide:cpu" class="w-4 h-4 text-primary" />
-          </div>
-          <span class="font-semibold">{{ getDeviceName(row.deviceId) }}</span>
-        </div>
-        <div v-else class="badge badge-error badge-sm text-white font-bold">
-          {{ $t('scheduler.noTarget') }}
-        </div>
-      </template>
-
-      <template #cell-taskAction="{ value, row }">
-        <div v-if="row.deviceGroupId" class="flex flex-col gap-1">
-          <span class="text-sm font-medium whitespace-nowrap">
-            {{ $t('common.command') }}: <span
-              class="font-mono bg-base-200 px-1.5 py-0.5 rounded border border-base-300">{{ value?.command || '-'
-              }}</span>
-          </span>
-          <span v-if="getActiveOverridesCount(row) > 0"
-            class="text-[10px] text-base-content/60 font-bold uppercase tracking-wide">
-            {{ $t('common.overridesCount', { count: getActiveOverridesCount(row) }) }}
-          </span>
-        </div>
-        <div v-else>
-          <span class="font-mono bg-base-200 px-2 py-1 rounded text-sm border border-base-300">{{ value?.command ||
-            value || '-' }}</span>
-        </div>
-      </template>
-
-      <template #cell-scheduleType="{ value }">
-        <span class="badge badge-outline badge-sm uppercase text-[10px] font-bold">
-          {{ value === 'one_time' ? $t('scheduler.typeOneTime') : $t('scheduler.typeRecurring') }}
-        </span>
-      </template>
-
-      <template #cell-startTime="{ value }">
-        <div class="flex items-center gap-2">
-          <Icon icon="lucide:clock" class="w-4 h-4 text-base-content/50" />
-          {{ value }}
-        </div>
-      </template>
-
-      <template #cell-status="{ row }">
-        <!-- 1. Check for missing protocol (Highest Priority Warning) -->
-        <div v-if="hasNoProtocol(row)"
-          class="badge badge-sm badge-warning text-white font-bold uppercase tracking-wider text-[10px]">
-          {{ $t('scheduler.status.noProtocol') }}
-        </div>
-
-        <!-- ⚡ 2. NEW: Check if the schedule is Overdue (Error/Danger) -->
-        <div v-else-if="isOverdue(row)"
-          class="badge badge-sm badge-error text-white font-bold uppercase tracking-wider text-[10px] shadow-sm">
-          {{ $t('scheduler.status.overdue') }}
-        </div>
-
-        <!-- 3. Standard Database Statuses -->
-        <div v-else class="badge badge-sm font-bold uppercase tracking-wider text-[10px]" :class="{
-          'badge-success text-white': row.status === 'completed',
-          'badge-info text-white': row.status === 'active',
-          'badge-error text-white': row.status === 'cancelled'
-        }">
-          {{ $t(`scheduler.status.${row.status}`) }}
-        </div>
-      </template>
-
-      <template #cell-actions="{ row }">
-        <div class="flex justify-end gap-2">
-          <button class="btn btn-sm btn-primary" @click="openEditModal(row)">
-            <Icon icon="lucide:pencil" class="w-5 h-5" />
+    <!-- Main Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="schedules" 
+        :columns="tableColumns" 
+        :is-loading="isSchedulesLoading"
+        :initial-sorting="[{ id: 'status', desc: false }]">
+        
+        <!-- Toolbar Actions -->
+        <template #toolbar-actions>
+          <button 
+            class="btn btn-sm btn-primary rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white" 
+            @click="openCreateModal">
+            <Icon icon="lucide:plus" class="w-4 h-4" />
+            {{ $t('scheduler.addSchedule') }}
           </button>
-          <button class="btn btn-sm btn-error text-white shadow-sm hover:shadow-md transition-all"
-            @click="openDeleteModal(row)">
-            <Icon icon="lucide:trash-2" class="w-5 h-5" />
-          </button>
-        </div>
-      </template>
-    </TableData>
+        </template>
 
-    <!-- Create / Edit Modal -->
-    <dialog class="modal modal-bottom sm:modal-middle" :class="{ 'modal-open': isModalOpen }">
-      <div class="modal-box sm:max-w-lg p-0 flex flex-col max-h-[90vh]">
+        <!-- Schedule ID with Tooltip -->
+        <template #cell-scheduleId="{ value }">
+          <div class="tooltip tooltip-right" :class="copiedId === value ? 'tooltip-success' : ''"
+            :data-tip="copiedId === value ? 'Copied!' : 'Copy ID'">
+            <div @click="copyToClipboard(value)"
+              class="max-w-[100px] md:max-w-[130px] truncate font-mono text-xs font-bold text-base-content/50 cursor-pointer hover:text-primary transition-colors">
+              {{ value }}
+            </div>
+          </div>
+        </template>
 
-        <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
-          <h3 class="m-0 font-bold text-lg flex items-center gap-2">
-            <Icon :icon="modalMode === 'create' ? 'lucide:calendar-plus' : 'lucide:calendar-check'"
-              class="w-5 h-5 text-primary" />
-            {{ modalMode === 'create' ? $t('scheduler.createSchedule') : $t('scheduler.editSchedule') }}
-          </h3>
+        <!-- Target Destination (Device / Group) -->
+        <template #cell-target="{ row }">
+          <div v-if="row.deviceGroupId" class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+              <Icon icon="lucide:layers" class="w-3.5 h-3.5" />
+            </div>
+            <span class="font-semibold text-sm text-base-content tracking-tight">{{ getGroupName(row.deviceGroupId) }}</span>
+          </div>
+          <div v-else-if="row.deviceId" class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Icon icon="lucide:cpu" class="w-3.5 h-3.5" />
+            </div>
+            <span class="font-semibold text-sm text-base-content tracking-tight">{{ getDeviceName(row.deviceId) }}</span>
+          </div>
+          <div v-else class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-error/10 text-error border border-error/20">
+            {{ $t('scheduler.noTarget') }}
+          </div>
+        </template>
+
+        <!-- Task Command & Overrides -->
+        <template #cell-taskAction="{ value, row }">
+          <div v-if="row.deviceGroupId" class="flex flex-col gap-0.5">
+            <span class="text-xs font-medium whitespace-nowrap text-base-content/80">
+              {{ $t('common.command') }}: 
+              <span class="font-mono bg-base-200 px-1.5 py-0.5 rounded border border-base-300 font-bold text-base-content">
+                {{ value?.command || '-' }}
+              </span>
+            </span>
+            <span v-if="getActiveOverridesCount(row) > 0"
+              class="text-[10px] text-primary font-bold uppercase tracking-wider">
+              {{ $t('common.overridesCount', { count: getActiveOverridesCount(row) }) }}
+            </span>
+          </div>
+          <div v-else>
+            <span class="font-mono bg-base-200 px-2 py-0.5 rounded text-xs border border-base-300 font-bold text-base-content">
+              {{ value?.command || value || '-' }}
+            </span>
+          </div>
+        </template>
+
+        <!-- Schedule Type Badge -->
+        <template #cell-scheduleType="{ value }">
+          <span 
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+            :class="value === 'one_time' ? 'bg-base-200 border border-base-300 text-base-content/70' : 'bg-accent/10 border border-accent/20 text-accent'">
+            {{ value === 'one_time' ? $t('scheduler.typeOneTime') : $t('scheduler.typeRecurring') }}
+          </span>
+        </template>
+
+        <!-- Start Time -->
+        <template #cell-startTime="{ value }">
+          <div class="flex items-center gap-1.5 text-xs font-mono text-base-content/70">
+            <Icon icon="lucide:clock" class="w-3.5 h-3.5 opacity-60" />
+            <span>{{ value }}</span>
+          </div>
+        </template>
+
+        <!-- Status Pill with Diagnostics -->
+        <template #cell-status="{ row }">
+          <!-- 1. Warning: No Protocol -->
+          <div v-if="hasNoProtocol(row)"
+            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wider text-[10px]">
+            <span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+            {{ $t('scheduler.status.noProtocol') }}
+          </div>
+
+          <!-- 2. Warning: Overdue -->
+          <div v-else-if="isOverdue(row)"
+            class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20 uppercase tracking-wider text-[10px]">
+            <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+            {{ $t('scheduler.status.overdue') }}
+          </div>
+
+          <!-- 3. Standard Status -->
+          <div v-else class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            :class="{
+              'bg-success/10 text-success border border-success/20': row.status === 'completed',
+              'bg-info/10 text-info border border-info/20': row.status === 'active',
+              'bg-base-200 text-base-content/50 border border-base-300': row.status === 'cancelled'
+            }">
+            <span class="w-1.5 h-1.5 rounded-full" :class="{
+              'bg-success': row.status === 'completed',
+              'bg-info animate-pulse': row.status === 'active',
+              'bg-base-content/30': row.status === 'cancelled'
+            }"></span>
+            {{ $t(`scheduler.status.${row.status}`) }}
+          </div>
+        </template>
+
+        <!-- Minimal Icon Actions -->
+        <template #cell-actions="{ row }">
+          <div class="flex justify-end items-center gap-1">
+            <button 
+              @click="openEditModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              :title="$t('common.edit')">
+              <Icon icon="lucide:pencil" class="w-4 h-4" />
+            </button>
+            <button 
+              @click="openDeleteModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-error hover:bg-error/10 transition-colors"
+              :title="$t('common.delete')">
+              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
+      </TableData>
+    </div>
+
+    <!-- Create / Edit Modal with Scrollable Body -->
+    <dialog class="modal z-[200]" :class="{ 'modal-open': isModalOpen }">
+      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[88vh] border border-base-300 bg-base-100">
+        
+        <!-- Pinned Header -->
+        <div class="px-6 py-4 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-primary/10 text-primary">
+              <Icon :icon="modalMode === 'create' ? 'lucide:calendar-plus' : 'lucide:calendar-check'" class="w-5 h-5" />
+            </div>
+            <div>
+              <h3 class="m-0 text-lg font-bold text-base-content">
+                {{ modalMode === 'create' ? $t('scheduler.createSchedule') : $t('scheduler.editSchedule') }}
+              </h3>
+              <p class="m-0 text-xs text-base-content/50">
+                {{ modalMode === 'create' ? $t('scheduler.createSubtitle') : $t('scheduler.editSubtitle') }}
+              </p>
+            </div>
+          </div>
           <button type="button" class="btn btn-sm btn-circle btn-ghost" @click="closeModal">
             <Icon icon="lucide:x" class="w-4 h-4" />
           </button>
         </div>
 
-        <form @submit.prevent="saveSchedule" class="flex flex-col flex-1 min-h-0">
-          <div class="p-6 flex flex-col gap-2 flex-1 overflow-y-auto min-h-0">
+        <!-- Form Wrapper -->
+        <form @submit.prevent="saveSchedule" class="flex flex-col flex-1 overflow-hidden bg-base-100">
+          <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
 
+            <!-- Target Type Selector -->
             <div class="form-control w-full">
-              <div class="label pb-2">
-                <span class="label-text font-semibold">{{ $t('scheduler.targetType') }}</span>
+              <div class="label pb-1.5">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('scheduler.targetType') }}</span>
               </div>
-              <div class="flex gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="device" class="radio radio-primary radio-sm" v-model="form.targetType"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.targetType === 'device' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="device" class="radio radio-primary radio-xs" v-model="form.targetType"
                     @change="v$.$reset()" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:cpu" class="w-4 h-4" /> {{ $t('common.device') }}
                   </span>
                 </label>
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="group" class="radio radio-primary radio-sm" v-model="form.targetType"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.targetType === 'group' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="group" class="radio radio-primary radio-xs" v-model="form.targetType"
                     @change="v$.$reset()" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:layers" class="w-4 h-4" /> {{ $t('common.group') }}
                   </span>
                 </label>
               </div>
             </div>
 
-            <div class="form-control w-full mt-2">
+            <!-- Target Dropdown -->
+            <div class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ form.targetType === 'device' ?
-                  $t('scheduler.selectTargetDevice')
-                  : $t('scheduler.selectTargetGroup') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ form.targetType === 'device' ? $t('scheduler.selectTargetDevice') : $t('scheduler.selectTargetGroup') }}
+                  <span class="text-error ml-0.5">*</span>
+                </span>
               </div>
 
               <template v-if="form.targetType === 'device'">
                 <SearchableDropdown v-model="form.deviceId" :options="realDevices" label-key="deviceName"
                   value-key="deviceId" :placeholder="$t('common.searchDevice')" />
-                <div class="label px-1 py-0 h-5">
-                  <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium">{{
-                    v$.deviceId.$errors[0].$message }}</span>
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.deviceId.$errors[0].$message }}
+                  </span>
                 </div>
               </template>
               <template v-else>
                 <SearchableDropdown v-model="form.deviceGroupId" :options="groups" label-key="groupName"
                   value-key="groupId" :placeholder="$t('common.searchGroup')" />
-                <div class="label px-1 py-0 h-5">
-                  <span v-if="v$.deviceGroupId.$error" class="label-text-alt text-error font-medium">{{
-                    v$.deviceGroupId.$errors[0].$message }}</span>
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.deviceGroupId.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.deviceGroupId.$errors[0].$message }}
+                  </span>
                 </div>
               </template>
             </div>
@@ -192,88 +266,97 @@
             <!-- Single Device Command -->
             <template v-if="form.targetType === 'device'">
               <label class="form-control w-full">
-                <div class="label pb-1">
-                  <span class="label-text font-semibold">{{ $t('scheduler.taskCommand') }}</span>
+                <div class="label pb-1 flex justify-between">
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                    {{ $t('scheduler.taskCommand') }}
+                    <span class="text-error ml-0.5">*</span>
+                  </span>
                 </div>
                 <input type="text" v-model="form.taskActionPayload.command"
                   @blur="v$.taskActionPayload.command.$touch()"
-                  :class="['input input-bordered w-full', { 'input-error': v$.taskActionPayload.command.$error }]"
+                  :class="['input input-sm h-10 input-bordered w-full rounded-xl font-mono text-xs', { 'input-error': v$.taskActionPayload.command.$error }]"
                   :placeholder="$t('scheduler.taskCommandPlaceholder')" />
-                <div class="label px-1 py-0 h-5">
-                  <span v-if="v$.taskActionPayload.command.$error" class="label-text-alt text-error font-medium">{{
-                    v$.taskActionPayload.command.$errors[0].$message }}</span>
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.taskActionPayload.command.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.taskActionPayload.command.$errors[0].$message }}
+                  </span>
                 </div>
               </label>
             </template>
 
-            <!-- Group Device Command -->
+            <!-- Group Device Command with Overrides -->
             <template v-if="form.targetType === 'group' && form.deviceGroupId">
-              <div class="p-4 bg-base-200/50 rounded-box border border-base-200 mt-2">
-                <h4 class="font-bold text-sm mb-3">{{ $t('common.groupCommandSettings') }}</h4>
+              <div class="p-4 bg-base-200/50 rounded-2xl border border-base-300 flex flex-col gap-3">
+                <h4 class="font-bold text-xs uppercase tracking-wider text-base-content/80 m-0">
+                  {{ $t('common.groupCommandSettings') }}
+                </h4>
 
                 <label class="form-control w-full">
-                  <div class="label pb-1"><span class="label-text font-semibold text-primary">{{
-                    $t('common.baseCommandGroup') }}</span></div>
+                  <div class="label pb-1">
+                    <span class="label-text text-xs font-semibold text-primary">{{ $t('common.baseCommandGroup') }}</span>
+                  </div>
                   <input type="text" v-model="form.taskActionPayload.command"
                     @blur="v$.taskActionPayload.command.$touch()"
-                    :class="['input input-bordered w-full border-primary', { 'input-error': v$.taskActionPayload.command.$error }]"
+                    :class="['input input-sm h-10 input-bordered w-full rounded-xl font-mono text-xs border-primary/40', { 'input-error': v$.taskActionPayload.command.$error }]"
                     placeholder="e.g., 0" />
-                  <div class="label px-1 py-0 h-5">
-                    <span v-if="v$.taskActionPayload.command.$error" class="label-text-alt text-error font-medium">{{
-                      v$.taskActionPayload.command.$errors[0].$message }}</span>
+                  <div class="label px-1 py-0.5 min-h-[20px]">
+                    <span v-if="v$.taskActionPayload.command.$error" class="label-text-alt text-error font-medium text-xs">
+                      {{ v$.taskActionPayload.command.$errors[0].$message }}
+                    </span>
                   </div>
                 </label>
 
-                <div class="flex justify-between items-center mt-2 border-t border-base-200/50 pt-4 mb-2">
-                  <span class="label-text font-semibold text-primary">{{ $t('common.enableOverrides') }}</span>
+                <div class="flex justify-between items-center border-t border-base-300 pt-3">
+                  <span class="text-xs font-bold text-base-content/80">{{ $t('common.enableOverrides') }}</span>
                   <input type="checkbox" v-model="form.enableOverrides" @change="handleOverrideToggle"
                     class="toggle toggle-primary toggle-sm" />
                 </div>
 
-                <div v-if="form.enableOverrides" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2">
+                <div v-if="form.enableOverrides" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
                   <div v-for="device in activeGroupDevices" :key="device.deviceId"
-                    class="flex items-center gap-3 p-2 bg-base-100 rounded-lg border border-base-200">
-                    <span class="flex-1 text-sm font-semibold truncate" :title="device.deviceName">{{ device.deviceName
-                      }}</span>
-
+                    class="flex items-center gap-2 p-2 bg-base-100 rounded-xl border border-base-300">
+                    <span class="flex-1 text-xs font-semibold truncate text-base-content" :title="device.deviceName">
+                      {{ device.deviceName }}
+                    </span>
                     <input type="text" v-model="form.taskActionPayload.deviceOverrides[device.deviceId]"
-                      class="input input-bordered input-sm w-32" :placeholder="$t('common.default')" />
+                      class="input input-bordered input-xs h-8 w-28 rounded-lg font-mono text-xs" :placeholder="$t('common.default')" />
                   </div>
-                  <div v-if="activeGroupDevices.length === 0"
-                    class="text-sm italic text-base-content/50 text-center py-4">
+                  <div v-if="activeGroupDevices.length === 0" class="text-xs italic text-base-content/40 text-center py-3">
                     {{ $t('common.noDevicesAssigned') }}
                   </div>
                 </div>
               </div>
             </template>
 
-            <div class="form-control w-full mt-2">
-              <div class="label pb-2">
-                <span class="label-text font-semibold">{{ $t('scheduler.scheduleType') }}</span>
+            <!-- Schedule Type Selector -->
+            <div class="form-control w-full">
+              <div class="label pb-1.5">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('scheduler.scheduleType') }}</span>
               </div>
-              <div class="flex gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="one_time" class="radio radio-primary radio-sm"
-                    v-model="form.scheduleType" />
-                  <span class="label-text font-medium">{{ $t('scheduler.oneTimeEvent') }}</span>
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.scheduleType === 'one_time' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="one_time" class="radio radio-primary radio-xs" v-model="form.scheduleType" />
+                  <span class="text-xs font-medium">{{ $t('scheduler.oneTimeEvent') }}</span>
                 </label>
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="recurring" class="radio radio-primary radio-sm"
-                    v-model="form.scheduleType" />
-                  <span class="label-text font-medium">{{ $t('scheduler.recurringCron') }}</span>
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.scheduleType === 'recurring' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="recurring" class="radio radio-primary radio-xs" v-model="form.scheduleType" />
+                  <span class="text-xs font-medium">{{ $t('scheduler.recurringCron') }}</span>
                 </label>
               </div>
             </div>
 
+            <!-- Recurring / Cron Section -->
             <div v-if="form.scheduleType === 'recurring'"
-              class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-2 p-4 bg-base-200/50 border border-base-200 rounded-box">
-              <label class="form-control w-full sm:col-span-2">
+              class="flex flex-col gap-3 p-4 bg-base-200/50 border border-base-300 rounded-2xl">
+              <label class="form-control w-full">
                 <div class="label pb-1">
-                  <span class="label-text font-semibold">{{ $t('scheduler.runFrequency') }}</span>
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('scheduler.runFrequency') }}</span>
                 </div>
-                <select v-model="cronPreset" @change="handleCronPresetChange" class="select select-bordered w-full">
+                <select v-model="cronPreset" @change="handleCronPresetChange" class="select select-sm h-10 select-bordered w-full rounded-xl text-xs font-medium">
                   <option value="*/5 * * * *">{{ $t('scheduler.freq.min5') }}</option>
                   <option value="*/15 * * * *">{{ $t('scheduler.freq.min15') }}</option>
                   <option value="0 * * * *">{{ $t('scheduler.freq.hour1') }}</option>
@@ -285,20 +368,19 @@
 
               <!-- Custom Cron Section with Simple & Advanced Toggle -->
               <div v-if="cronPreset === 'custom'"
-                class="form-control w-full sm:col-span-2 mt-2 p-3 bg-base-100 rounded-lg border border-base-200 shadow-sm">
+                class="form-control w-full p-3.5 bg-base-100 rounded-xl border border-base-300 shadow-2xs">
 
-                <!-- Header & Toggle -->
-                <div class="flex justify-between items-center mb-4">
+                <!-- Header & Mode Toggle -->
+                <div class="flex justify-between items-center mb-3">
                   <div>
-                    <span class="label-text font-semibold">{{ $t('scheduler.customTime') }}</span>
-                    <div class="text-xs text-base-content/60">
+                    <span class="label-text font-bold text-xs">{{ $t('scheduler.customTime') }}</span>
+                    <div class="text-[11px] text-base-content/50">
                       {{ isAdvancedCron ? $t('scheduler.advancedMode') : $t('scheduler.customTimeHint') }}
                     </div>
                   </div>
-                  <label class="cursor-pointer label flex gap-2 p-0">
-                    <span class="label-text text-xs font-bold text-base-content/70">{{ $t('scheduler.advanced')
-                      }}</span>
-                    <input type="checkbox" class="toggle toggle-primary toggle-sm" v-model="isAdvancedCron"
+                  <label class="cursor-pointer label flex items-center gap-2 p-0">
+                    <span class="label-text text-[11px] font-bold text-base-content/60">{{ $t('scheduler.advanced') }}</span>
+                    <input type="checkbox" class="toggle toggle-primary toggle-xs" v-model="isAdvancedCron"
                       @change="handleAdvancedToggle" />
                   </label>
                 </div>
@@ -307,19 +389,18 @@
                 <div v-if="!isAdvancedCron" class="flex flex-col gap-3">
                   <VueDatePicker v-model="customTime" time-picker format="HH:mm" :dark="themeStore.isDarkTheme"
                     :locale="dateFnsLocale" :format-locale="dateFnsLocale" placeholder="Select Time" teleport-center
-                    :action-row="{
-                      selectBtnLabel: $t('common.select'),
-                      cancelBtnLabel: $t('common.cancel')
-                    }" @update:model-value="handleTimeChange" @closed="v$.cronExpression.$touch()">
+                    :action-row="{ selectBtnLabel: $t('common.select'), cancelBtnLabel: $t('common.cancel') }" 
+                    @update:model-value="handleTimeChange" @closed="v$.cronExpression.$touch()">
                     <template #input-icon>
-                      <Icon icon="lucide:clock" class="w-5 h-5 ml-3 text-base-content/50" />
+                      <Icon icon="lucide:clock" class="w-4 h-4 ml-3 text-base-content/50" />
                     </template>
                   </VueDatePicker>
 
                   <div>
-                    <div class="flex flex-wrap gap-2">
-                      <button v-for="day in weekDays" :key="day.value" type="button" class="btn btn-sm"
-                        :class="customDays.includes(day.value) ? 'btn-primary text-white border-primary' : 'btn-outline border-base-content/20 text-base-content/70'"
+                    <div class="flex flex-wrap gap-1.5">
+                      <button v-for="day in weekDays" :key="day.value" type="button" 
+                        class="btn btn-xs rounded-lg font-bold transition-all"
+                        :class="customDays.includes(day.value) ? 'btn-primary text-white' : 'btn-outline border-base-300 text-base-content/70 hover:bg-base-200'"
                         @click="toggleDay(day.value)">
                         {{ $t(day.key) }}
                       </button>
@@ -328,99 +409,103 @@
                 </div>
 
                 <!-- ADVANCED MODE: 5-Input Grid -->
-                <div v-else class="flex gap-2 w-full">
+                <div v-else class="flex gap-1.5 w-full">
                   <label class="form-control flex-1">
-                    <div class="label pb-1 px-1"><span class="label-text text-[10px] font-bold">{{
-                      $t('scheduler.cronParts.minute') }}</span></div>
+                    <div class="label pb-1 px-0.5"><span class="label-text text-[9px] font-bold uppercase text-base-content/60">{{ $t('scheduler.cronParts.minute') }}</span></div>
                     <input type="text" v-model="cronParts.minute" @input="updateFromCronParts"
-                      class="input input-sm input-bordered w-full text-center font-mono" />
+                      class="input input-xs h-8 input-bordered w-full text-center font-mono rounded-lg" />
                   </label>
                   <label class="form-control flex-1">
-                    <div class="label pb-1 px-1"><span class="label-text text-[10px] font-bold">{{
-                      $t('scheduler.cronParts.hour') }}</span></div>
+                    <div class="label pb-1 px-0.5"><span class="label-text text-[9px] font-bold uppercase text-base-content/60">{{ $t('scheduler.cronParts.hour') }}</span></div>
                     <input type="text" v-model="cronParts.hour" @input="updateFromCronParts"
-                      class="input input-sm input-bordered w-full text-center font-mono" />
+                      class="input input-xs h-8 input-bordered w-full text-center font-mono rounded-lg" />
                   </label>
                   <label class="form-control flex-1">
-                    <div class="label pb-1 px-1"><span class="label-text text-[10px] font-bold">{{
-                      $t('scheduler.cronParts.day') }}</span></div>
+                    <div class="label pb-1 px-0.5"><span class="label-text text-[9px] font-bold uppercase text-base-content/60">{{ $t('scheduler.cronParts.day') }}</span></div>
                     <input type="text" v-model="cronParts.day" @input="updateFromCronParts"
-                      class="input input-sm input-bordered w-full text-center font-mono" />
+                      class="input input-xs h-8 input-bordered w-full text-center font-mono rounded-lg" />
                   </label>
                   <label class="form-control flex-1">
-                    <div class="label pb-1 px-1"><span class="label-text text-[10px] font-bold">{{
-                      $t('scheduler.cronParts.month') }}</span></div>
+                    <div class="label pb-1 px-0.5"><span class="label-text text-[9px] font-bold uppercase text-base-content/60">{{ $t('scheduler.cronParts.month') }}</span></div>
                     <input type="text" v-model="cronParts.month" @input="updateFromCronParts"
-                      class="input input-sm input-bordered w-full text-center font-mono" />
+                      class="input input-xs h-8 input-bordered w-full text-center font-mono rounded-lg" />
                   </label>
                   <label class="form-control flex-1">
-                    <div class="label pb-1 px-1"><span class="label-text text-[10px] font-bold">{{
-                      $t('scheduler.cronParts.week') }}</span></div>
+                    <div class="label pb-1 px-0.5"><span class="label-text text-[9px] font-bold uppercase text-base-content/60">{{ $t('scheduler.cronParts.week') }}</span></div>
                     <input type="text" v-model="cronParts.week" @input="updateFromCronParts"
-                      class="input input-sm input-bordered w-full text-center font-mono" />
+                      class="input input-xs h-8 input-bordered w-full text-center font-mono rounded-lg" />
                   </label>
                 </div>
 
-                <div class="label px-1 py-0 mt-1 h-5">
-                  <span v-if="v$.cronExpression.$error" class="label-text-alt text-error font-medium">{{
-                    v$.cronExpression.$errors[0].$message }}</span>
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.cronExpression.$error" class="label-text-alt text-error font-medium text-xs">
+                    {{ v$.cronExpression.$errors[0].$message }}
+                  </span>
                 </div>
               </div>
 
-              <label class="form-control w-full sm:col-span-2 mt-2">
+              <!-- End Time (Optional) -->
+              <label class="form-control w-full">
                 <div class="label pb-1">
-                  <span class="label-text font-semibold">{{ $t('scheduler.endTime') }}</span>
+                  <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('scheduler.endTime') }}</span>
                 </div>
                 <VueDatePicker v-model="form.endTime" :is-24="true" :enable-time-picker="true" auto-apply
                   :preset-dates="presetDates" :locale="dateFnsLocale" :format-locale="dateFnsLocale"
-                  :dark="themeStore.isDarkTheme" :formats="{ input: 'dd/MM/yyyy HH:mm' }" :action-row="{
-                    selectBtnLabel: $t('common.select'),
-                    cancelBtnLabel: $t('common.cancel')
-                  }" :placeholder="$t('scheduler.selectEndTime')" teleport-center>
+                  :dark="themeStore.isDarkTheme" :formats="{ input: 'dd/MM/yyyy HH:mm' }" 
+                  :action-row="{ selectBtnLabel: $t('common.select'), cancelBtnLabel: $t('common.cancel') }" 
+                  :placeholder="$t('scheduler.selectEndTime')" teleport-center>
                   <template #input-icon>
-                    <Icon icon="lucide:calendar-clock" class="w-5 h-5 ml-3 text-base-content/50" />
+                    <Icon icon="lucide:calendar-clock" class="w-4 h-4 ml-3 text-base-content/50" />
                   </template>
                 </VueDatePicker>
               </label>
             </div>
 
-            <label class="form-control w-full mt-2">
+            <!-- Start Time -->
+            <label class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('scheduler.startTime') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ $t('scheduler.startTime') }}
+                  <span class="text-error ml-0.5">*</span>
+                </span>
               </div>
               <VueDatePicker v-model="form.startTime" :is-24="true" :enable-time-picker="true" auto-apply
                 :preset-dates="presetDates" :locale="dateFnsLocale" :format-locale="dateFnsLocale"
-                :dark="themeStore.isDarkTheme" :formats="{ input: 'dd/MM/yyyy HH:mm' }" :action-row="{
-                  selectBtnLabel: $t('common.select'),
-                  cancelBtnLabel: $t('common.cancel'),
-                }" :placeholder="$t('scheduler.selectStartTime')" teleport-center @closed="v$.startTime.$touch()">
+                :dark="themeStore.isDarkTheme" :formats="{ input: 'dd/MM/yyyy HH:mm' }" 
+                :action-row="{ selectBtnLabel: $t('common.select'), cancelBtnLabel: $t('common.cancel') }" 
+                :placeholder="$t('scheduler.selectStartTime')" teleport-center @closed="v$.startTime.$touch()">
                 <template #input-icon>
-                  <Icon icon="lucide:calendar-clock" class="w-5 h-5 ml-3 text-base-content/50" />
+                  <Icon icon="lucide:calendar-clock" class="w-4 h-4 ml-3 text-base-content/50" />
                 </template>
               </VueDatePicker>
-              <div class="label px-1 py-0 h-5">
-                <span v-if="v$.startTime.$error" class="label-text-alt text-error font-medium">{{
-                  v$.startTime.$errors[0].$message }}</span>
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.startTime.$error" class="label-text-alt text-error font-medium text-xs">
+                  {{ v$.startTime.$errors[0].$message }}
+                </span>
               </div>
             </label>
 
+            <!-- Execution Status (Edit Mode) -->
             <label v-if="modalMode === 'edit'" class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('common.status') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('common.status') }}</span>
               </div>
-              <select v-model="form.status" class="select select-bordered w-full">
+              <select v-model="form.status" class="select select-sm h-10 select-bordered w-full rounded-xl text-xs font-semibold">
                 <option value="active">{{ $t('scheduler.status.active') }}</option>
                 <option value="completed">{{ $t('scheduler.status.completed') }}</option>
                 <option value="cancelled">{{ $t('scheduler.status.cancelled') }}</option>
               </select>
             </label>
+
           </div>
 
-          <div class="px-6 py-4 border-t border-base-200 bg-base-100 flex justify-end gap-3 shrink-0">
-            <button type="button" class="btn btn-ghost" @click="closeModal" :disabled="isSaving">{{ $t('common.cancel')
-              }}</button>
-            <button type="submit" class="btn btn-primary text-white px-8" :disabled="isSaving">
-              <span v-if="isSaving" class="loading loading-spinner loading-sm"></span>
+          <!-- Pinned Footer -->
+          <div class="border-t border-base-200 p-4 px-6 flex justify-end gap-2 shrink-0 bg-base-100">
+            <button type="button" class="btn btn-sm btn-ghost rounded-xl" @click="closeModal" :disabled="isSaving">
+              {{ $t('common.cancel') }}
+            </button>
+            <button type="submit" class="btn btn-sm btn-primary rounded-xl px-6 text-white font-semibold" :disabled="isSaving">
+              <span v-if="isSaving" class="loading loading-spinner loading-xs"></span>
               {{ isSaving ? $t('scheduler.saving') : $t('scheduler.saveSchedule') }}
             </button>
           </div>
@@ -429,27 +514,28 @@
       <form method="dialog" class="modal-backdrop" @click="closeModal"><button>close</button></form>
     </dialog>
 
+    <!-- Delete Confirmation Modal -->
     <dialog ref="deleteModal" class="modal z-[200]">
-      <div class="modal-box">
+      <div class="modal-box rounded-2xl border border-base-300 p-6">
         <h3 class="font-bold text-lg text-error flex items-center gap-2">
-          <Icon icon="lucide:alert-triangle" class="w-6 h-6" /> {{ $t('common.confirmDelete') || 'Confirm Deletion' }}
+          <Icon icon="lucide:alert-triangle" class="w-5 h-5" /> {{ $t('common.confirmDelete') }}
         </h3>
-        <p class="py-4 text-base-content/80">
-          {{ $t('scheduler.deleteWarning')
-            || 'Are you sure you want to delete this schedule? This action cannot be undone.' }}
+        <p class="py-3 text-sm text-base-content/80">
+          {{ $t('scheduler.deleteWarning') }}
         </p>
-        <div class="modal-action">
-          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
-            {{ $t('common.noCancel') || 'Cancel' }}
+        <div class="modal-action mt-4">
+          <button type="button" @click="closeDeleteModal" class="btn btn-sm btn-ghost rounded-xl" :disabled="isDeleting">
+            {{ $t('common.noCancel') }}
           </button>
-          <button type="button" @click="confirmDelete" class="btn btn-error text-white" :disabled="isDeleting">
-            <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span>
-            {{ $t('common.yesDelete') || 'Delete' }}
+          <button type="button" @click="confirmDelete" class="btn btn-sm btn-error text-white rounded-xl font-semibold px-6" :disabled="isDeleting">
+            <span v-if="isDeleting" class="loading loading-spinner loading-xs"></span>
+            {{ $t('common.yesDelete') }}
           </button>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button @click="closeDeleteModal">close</button></form>
     </dialog>
+
   </div>
   <NoAccess v-else />
 </template>
@@ -469,6 +555,7 @@ import { usePermissionStore } from '@/stores/usePermissionStore';
 import NoAccess from '@/components/NoAccess.vue';
 import SearchableDropdown from '@/components/SearchableDropdown.vue';
 import TableData from '@/components/TableData.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 import { useFormatter } from '@/composables/useFormatter';
@@ -478,11 +565,9 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import thLocale from 'date-fns/locale/th';
 import enLocale from 'date-fns/locale/en-US';
 
-
-
 const themeStore = useThemeStore();
 const { t, locale } = useI18n();
-const mainMenuName = 'Scheduler'
+const mainMenuName = 'Scheduler';
 
 const { data: devicesData, error: deviceDataError, execute: fetchDevices } = useFetch();
 const { data: groupsData, error: groupDataError, execute: fetchGroups } = useFetch();
@@ -521,6 +606,44 @@ const weekDays = [
   { key: 'scheduler.days.fri', value: '5' },
   { key: 'scheduler.days.sat', value: '6' }
 ];
+
+// Dynamic bilingual summary stats
+const statCardsData = computed(() => {
+  const total = schedules.value.length;
+  const activeRuns = schedules.value.filter(s => s.status === 'active' && !isOverdue(s) && !hasNoProtocol(s)).length;
+  const needsAttention = schedules.value.filter(s => isOverdue(s) || hasNoProtocol(s)).length;
+  const recurringCount = schedules.value.filter(s => s.scheduleType === 'recurring').length;
+
+  return [
+    {
+      label: t('scheduler.stats.total'),
+      value: total,
+      icon: 'lucide:calendar-clock',
+      color: 'primary'
+    },
+    {
+      label: t('scheduler.stats.active'),
+      value: activeRuns,
+      icon: 'lucide:activity',
+      color: 'success',
+      valueClass: 'text-success'
+    },
+    {
+      label: t('scheduler.stats.attention'),
+      value: needsAttention,
+      icon: 'lucide:alert-circle',
+      color: needsAttention > 0 ? 'error' : 'ghost',
+      valueClass: needsAttention > 0 ? 'text-error' : 'text-base-content/50'
+    },
+    {
+      label: t('scheduler.stats.recurring'),
+      value: recurringCount,
+      icon: 'lucide:repeat',
+      color: 'info',
+      valueClass: 'text-info'
+    }
+  ];
+});
 
 const tableColumns = computed(() => [
   { header: t('scheduler.table.id'), accessorKey: 'scheduleId' },
@@ -580,7 +703,6 @@ const form = ref({
   cronExpression: '*/5 * * * *'
 });
 
-// Robust resolver to handle CJS, ESM, or nested { default: ... } structures
 const resolveLocale = (loc) => {
   if (!loc) return undefined;
   if (loc.localize) return loc;
@@ -591,7 +713,6 @@ const resolveLocale = (loc) => {
 };
 
 const dateFnsLocale = computed(() => {
-  // Use startsWith so both 'th' and 'th-TH' match
   const isThai = locale.value?.startsWith('th');
   return resolveLocale(isThai ? thLocale : enLocale);
 });
@@ -686,14 +807,12 @@ const activeGroupDevices = computed(() => {
     groupDevs = devices.value.filter(d => d.deviceGroupId === form.value.deviceGroupId);
   }
 
-  // ⚡ Exclude virtual devices from the command override list
   return groupDevs.filter(d => !d.refDeviceId);
 });
 
 const hasNoProtocol = (row) => {
   if (row.deviceId) {
     const device = devicesData.value?.data?.find(d => d.deviceId === row.deviceId);
-    // ⚡ Flag warning if device has no protocol OR is a virtual sensor
     if (device && (!device.protocol || device.protocol === 'none' || device.refDeviceId)) {
       return true;
     }
@@ -728,16 +847,12 @@ const copiedId = ref(null);
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
-
     copiedId.value = text;
-
-    // reset after 2s
     setTimeout(() => {
       if (copiedId.value === text) {
         copiedId.value = null;
       }
     }, 2000);
-
   } catch (err) {
     toast.error("Failed to copy ID.");
   }
@@ -749,13 +864,12 @@ const handleOverrideToggle = () => {
   }
 };
 
-
 const loadData = async () => {
   await fetchDevices('/device/getalldetail');
   if (deviceDataError.value) toast.error(deviceDataError.value.message || t('common.messages.loadFailed', { item: "device" }));
   if (devicesData.value?.data) devices.value = devicesData.value.data;
   await fetchGroups('/device/group/getalldetail');
-  if (groupDataError.value) toast.error(groupDataError.value.message || t('common.messages.loadFailed'), { item: "group device" });
+  if (groupDataError.value) toast.error(groupDataError.value.message || t('common.messages.loadFailed', { item: "group device" }));
   if (groupsData.value?.data) groups.value = groupsData.value.data;
   await fetchSchedules('/schedule/getalldetail');
   if (schedulesDataError.value) toast.error(schedulesDataError.value.message || t('common.messages.loadFailed', { item: "schedule" }));
@@ -798,7 +912,6 @@ const getActiveOverridesCount = (row) => {
 
 const standardPresets = ['*/5 * * * *', '*/15 * * * *', '0 * * * *', '0 0 * * *', '0 8 * * *'];
 
-// 1. Clean reset for custom cron inputs
 const resetCustomCronState = () => {
   customTime.value = { hours: 12, minutes: 0 };
   customDays.value = [];
@@ -806,36 +919,30 @@ const resetCustomCronState = () => {
   cronParts.value = { minute: '*', hour: '*', day: '*', month: '*', week: '*' };
 };
 
-// 2. Safely populate or clear cron states based on incoming data
 const setupCronFromExpression = (cronExpression, scheduleType) => {
   resetCustomCronState();
 
-  // If one-time or empty, fall back to default standard preset
   if (scheduleType !== 'recurring' || !cronExpression) {
     cronPreset.value = '*/5 * * * *';
     form.value.cronExpression = '*/5 * * * *';
     return;
   }
 
-  // If it matches a standard dropdown option
   if (standardPresets.includes(cronExpression)) {
     cronPreset.value = cronExpression;
     return;
   }
 
-  // It is a custom cron expression:
   cronPreset.value = 'custom';
   parseIntoCronParts(cronExpression);
 
   const parts = cronExpression.trim().split(/\s+/);
   if (parts.length >= 5) {
-
-    // ⚡ UPDATED: Stricter logic to determine if the cron must use Advanced Mode
     const isComplex =
-      !/^\d+$/.test(parts[0]) || // Minute is not a pure number (contains *, /, etc.)
-      !/^\d+$/.test(parts[1]) || // Hour is not a pure number (contains *, /, etc.)
-      parts[2] !== '*' ||        // Specific day of month is used
-      parts[3] !== '*';          // Specific month is used
+      !/^\d+$/.test(parts[0]) ||     
+      !/^\d+$/.test(parts[1]) ||
+      parts[2] !== '*' ||
+      parts[3] !== '*';
 
     if (isComplex) {
       isAdvancedCron.value = true;
@@ -873,9 +980,7 @@ const openCreateModal = () => {
     cronExpression: '*/5 * * * *',
   };
 
-  // Always reset to clean state on create
   setupCronFromExpression('*/5 * * * *', 'one_time');
-
   v$.value.$reset();
   isModalOpen.value = true;
 };
@@ -919,9 +1024,7 @@ const openEditModal = (schedule) => {
     form.value.enableOverrides = Object.keys(cleanOverrides).length > 0;
   }
 
-  // Populate from real data or reset cleanly if one_time / standard preset
   setupCronFromExpression(schedule.cronExpression, schedule.scheduleType);
-
   v$.value.$reset();
   isModalOpen.value = true;
 };

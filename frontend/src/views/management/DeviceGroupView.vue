@@ -1,95 +1,170 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
-    <!-- Page Header Card -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:layers" class="w-7 h-7" />
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
+    
+    <!-- Anchored Page Header Card with Background -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:layers" class="w-6 h-6" />
         </div>
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('deviceGroup.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('deviceGroup.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span>{{ $t('menu.management') }}</span>
+            <Icon icon="lucide:chevron-right" class="w-3.5 h-3.5" />
+            <span class="text-primary">{{ $t('deviceGroup.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('deviceGroup.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('deviceGroup.subtitle') }}
+          </p>
         </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button 
+          @click="loadTable" 
+          class="btn btn-sm btn-ghost border border-base-300 bg-base-100 hover:bg-base-200 rounded-xl gap-1.5 text-xs font-semibold shadow-xs transition-all"
+          :title="$t('common.refresh')">
+          <Icon icon="lucide:refresh-cw" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoadingGroups }" />
+          <span>{{ $t('common.refresh') }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Groups Table -->
-    <TableData :data="groupTable" :columns="tableColumns" :initial-sorting="[{ id: 'groupId', desc: false }]"
-      :is-loading="isLoadingGroups">
-      <template #toolbar-actions>
-        <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
-          <Icon icon="lucide:plus" class="w-5 h-5 mr-1" />
-          {{ $t('deviceGroup.addGroup') }}
-        </button>
-      </template>
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
 
-      <!-- ⚡ NEW: Protocol Badge Display -->
-      <template #cell-protocol="{ value }">
-        <span v-if="value" class="badge badge-outline badge-sm font-bold uppercase tracking-wider text-primary">
-          {{ value }}
-        </span>
-        <span v-else class="badge badge-ghost badge-sm font-bold tracking-wider text-base-content/50">
-          {{ $t('common.none') }}
-        </span>
-      </template>
-
-      <template #cell-deviceCount="{ row }">
-        <div class="badge badge-outline badge-sm font-bold text-secondary">
-          {{ row.deviceIds?.length || 0 }} {{ $t('common.devices') }}
-        </div>
-      </template>
-
-      <template #cell-actions="{ row }">
-        <div class="flex justify-end gap-2">
-          <button @click="openEditModal(row)" class="btn btn-sm btn-primary">
-            <Icon icon="lucide:pencil" class="w-5 h-5" />
+    <!-- Main Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="groupTable" 
+        :columns="tableColumns" 
+        :initial-sorting="[{ id: 'groupId', desc: false }]"
+        :is-loading="isLoadingGroups">
+        
+        <!-- Toolbar Actions -->
+        <template #toolbar-actions>
+          <button 
+            class="btn btn-sm btn-primary rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white" 
+            @click="openCreateModal">
+            <Icon icon="lucide:plus" class="w-4 h-4" />
+            {{ $t('deviceGroup.addGroup') }}
           </button>
-          <button @click="openDeleteModal(row)" class="btn btn-sm btn-error text-white">
-            <Icon icon="lucide:trash-2" class="w-5 h-5" />
-          </button>
-        </div>
-      </template>
-    </TableData>
+        </template>
 
-    <!-- Create/Edit Modal -->
+        <!-- ID Cell -->
+        <template #cell-groupId="{ value }">
+          <span class="font-mono text-xs font-bold text-base-content/50">#{{ value }}</span>
+        </template>
+
+        <!-- Group Name Cell -->
+        <template #cell-groupName="{ row }">
+          <span class="font-semibold text-base-content tracking-tight text-sm">{{ row.groupName }}</span>
+        </template>
+
+        <!-- Description Cell -->
+        <template #cell-description="{ value }">
+          <span v-if="value" class="text-xs text-base-content/70">{{ value }}</span>
+          <span v-else class="text-base-content/30 text-xs font-mono">-</span>
+        </template>
+
+        <!-- Protocol Badge Display -->
+        <template #cell-protocol="{ value }">
+          <span v-if="value && value !== 'none'" class="inline-flex items-center px-2 py-0.5 rounded-md bg-base-200 border border-base-300 text-xs font-semibold uppercase tracking-wider text-base-content/80 font-mono">
+            {{ value }}
+          </span>
+          <span v-else class="text-base-content/40 text-xs">
+            {{ $t('common.none') }}
+          </span>
+        </template>
+
+        <!-- Device Count Pill -->
+        <template #cell-deviceCount="{ row }">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-info/10 text-info border border-info/20 text-xs font-semibold">
+            <Icon icon="lucide:cpu" class="w-3.5 h-3.5" />
+            <span>{{ row.deviceIds?.length || 0 }} {{ $t('common.devices') }}</span>
+          </div>
+        </template>
+
+        <!-- Minimal Icon Actions -->
+        <template #cell-actions="{ row }">
+          <div class="flex justify-end items-center gap-1">
+            <button 
+              @click="openEditModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              :title="$t('common.edit')">
+              <Icon icon="lucide:pencil" class="w-4 h-4" />
+            </button>
+            <button 
+              @click="openDeleteModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-error hover:bg-error/10 transition-colors"
+              :title="$t('common.delete')">
+              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
+      </TableData>
+    </div>
+
+    <!-- Create/Edit Modal with Scrollable Body -->
     <dialog ref="groupModal" class="modal">
-      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-visible shadow-2xl">
-        <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center">
-          <h3 class="m-0 text-xl font-extrabold text-base-content">
-            {{ isEditing ? $t('deviceGroup.editGroup') : $t('deviceGroup.createGroup') }}
-          </h3>
+      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[85vh] border border-base-300 bg-base-100">
+        <!-- Pinned Header -->
+        <div class="px-6 py-4 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-primary/10 text-primary">
+              <Icon :icon="isEditing ? 'lucide:pencil' : 'lucide:folder-plus'" class="w-5 h-5" />
+            </div>
+            <div>
+              <h3 class="m-0 text-lg font-bold text-base-content">
+                {{ isEditing ? $t('deviceGroup.editGroup') : $t('deviceGroup.createGroup') }}
+              </h3>
+              <p class="m-0 text-xs text-base-content/50">
+                {{ isEditing ? $t('deviceGroup.editSubtitle') : $t('deviceGroup.createSubtitle') }}
+              </p>
+            </div>
+          </div>
           <button type="button" class="btn btn-sm btn-circle btn-ghost" @click="closeModal">
             <Icon icon="lucide:x" class="w-4 h-4" />
           </button>
         </div>
 
-        <form @submit.prevent="submitForm" autocomplete="off" class="p-6 bg-base-100">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
+        <!-- Form Wrapper -->
+        <form @submit.prevent="submitForm" autocomplete="off" class="flex flex-col flex-1 overflow-hidden bg-base-100">
+          <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
 
-            <label class="form-control w-full sm:col-span-2">
+            <!-- Group Name -->
+            <label class="form-control w-full">
               <div class="label pb-1 flex justify-between">
-                <span class="label-text font-semibold">{{ $t('deviceGroup.groupName') }}</span>
-                <span class="label-text-alt text-base-content/60 font-mono">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('deviceGroup.groupName') }}</span>
+                <span class="label-text-alt text-base-content/50 font-mono text-[11px]">
                   {{ form.groupName?.length || 0 }}/31
                 </span>
               </div>
               <input type="text" v-model="form.groupName" maxlength="31"
                 :placeholder="$t('deviceGroup.groupNamePlaceholder')" @blur="v$.groupName.$touch()"
-                :class="['input input-bordered w-full', { 'input-error': v$.groupName.$error }]" />
-              <div class="label px-1 py-1 h-6">
-                <span v-if="v$.groupName.$error" class="label-text-alt text-error font-medium">
+                :class="['input input-sm h-10 input-bordered w-full rounded-xl', { 'input-error': v$.groupName.$error }]" />
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.groupName.$error" class="label-text-alt text-error font-medium text-xs">
                   {{ v$.groupName.$errors[0].$message }}
                 </span>
               </div>
             </label>
 
-            <!-- ⚡ NEW: Gateway Protocol Dropdown -->
-            <label class="form-control w-full sm:col-span-2">
+            <!-- Gateway Protocol Dropdown -->
+            <label class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('common.protocol') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('common.protocol') }}</span>
               </div>
-              <select v-model="form.protocol" class="select select-bordered w-full">
+              <select v-model="form.protocol" class="select select-sm h-10 select-bordered w-full rounded-xl">
                 <option value="" disabled>{{ $t('common.protocolPlaceholder') }}</option>
                 <option value="none">{{ $t('common.none') }}</option>
                 <option v-for="proto in protocolList" :key="proto" :value="proto">
@@ -98,30 +173,34 @@
               </select>
             </label>
 
-            <label class="form-control w-full sm:col-span-2">
+            <!-- Description -->
+            <label class="form-control w-full">
               <div class="label pb-1 flex justify-between">
-                <span class="label-text font-semibold">{{ $t('common.description') }}</span>
-                <span class="label-text-alt text-base-content/60 font-mono">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('common.description') }}</span>
+                <span class="label-text-alt text-base-content/50 font-mono text-[11px]">
                   {{ form.description?.length || 0 }}/100
                 </span>
               </div>
               <input type="text" v-model="form.description" maxlength="100"
-                :placeholder="$t('deviceGroup.descriptionPlaceholder')" class="input input-bordered w-full" />
+                :placeholder="$t('deviceGroup.descriptionPlaceholder')" class="input input-sm h-10 input-bordered w-full rounded-xl" />
             </label>
 
-            <label class="form-control w-full mt-2 sm:col-span-2">
-              <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('deviceGroup.assignDevices') }}</span>
-                <span class="text-xs text-base-content/60">{{ $t('deviceGroup.assignDevicesDesc') }}</span>
+            <!-- Assign Devices Dropdown -->
+            <label class="form-control w-full mt-1">
+              <div class="label pb-1 flex justify-between items-center">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('deviceGroup.assignDevices') }}</span>
+                <span class="text-xs text-base-content/50">{{ $t('deviceGroup.assignDevicesDesc') }}</span>
               </div>
               <SearchableDropdown v-model="form.deviceIds" :options="deviceOptions" labelKey="deviceName"
                 valueKey="deviceId" :multiple="true" :placeholder="$t('common.searchDevice')" />
             </label>
+
           </div>
 
-          <div class="border-t border-base-200 mt-6 pt-5 flex justify-end gap-3">
-            <button type="button" class="btn btn-ghost" @click="closeModal">{{ $t('common.cancel') }}</button>
-            <button type="submit" class="btn btn-primary px-8 text-white">
+          <!-- Pinned Footer -->
+          <div class="border-t border-base-200 p-4 px-6 flex justify-end gap-2 shrink-0 bg-base-100">
+            <button type="button" class="btn btn-sm btn-ghost rounded-xl" @click="closeModal">{{ $t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-sm btn-primary rounded-xl px-6 text-white font-semibold">
               {{ isEditing ? $t('common.save') : $t('deviceGroup.createGroup') }}
             </button>
           </div>
@@ -132,19 +211,19 @@
 
     <!-- Delete Modal -->
     <dialog ref="deleteModal" class="modal z-[200]">
-      <div class="modal-box">
+      <div class="modal-box rounded-2xl border border-base-300 p-6">
         <h3 class="font-bold text-lg text-error flex items-center gap-2">
-          <Icon icon="lucide:alert-triangle" class="w-6 h-6" /> {{ $t('common.confirmDelete') }}
+          <Icon icon="lucide:alert-triangle" class="w-5 h-5" /> {{ $t('common.confirmDelete') }}
         </h3>
-        <p class="py-4 text-base-content/80">
+        <p class="py-3 text-sm text-base-content/80">
           {{ $t('deviceGroup.deleteWarning', { name: groupToDelete?.groupName }) }}
         </p>
-        <div class="modal-action">
-          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
+        <div class="modal-action mt-4">
+          <button type="button" @click="closeDeleteModal" class="btn btn-sm btn-ghost rounded-xl" :disabled="isDeleting">
             {{ $t('common.noCancel') }}
           </button>
-          <button type="button" @click="confirmDelete" class="btn btn-error text-white" :disabled="isDeleting">
-            <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span> {{ $t('common.yesDelete') }}
+          <button type="button" @click="confirmDelete" class="btn btn-sm btn-error text-white rounded-xl font-semibold" :disabled="isDeleting">
+            <span v-if="isDeleting" class="loading loading-spinner loading-xs"></span> {{ $t('common.yesDelete') }}
           </button>
         </div>
       </div>
@@ -168,11 +247,12 @@ import { usePermissionStore } from '@/stores/usePermissionStore';
 import NoAccess from '@/components/NoAccess.vue';
 import TableData from '@/components/TableData.vue';
 import SearchableDropdown from '@/components/SearchableDropdown.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 const { handleError } = useErrorHandler();
 
 const { t } = useI18n();
-const mainMenuName = 'Device Group'
+const mainMenuName = 'Device Group';
 
 const permissionStore = usePermissionStore();
 const { hasPermission } = permissionStore;
@@ -182,8 +262,6 @@ const { error: groupUpdatedError, execute: groupUpdatedApi } = useMutation();
 const { data: groupAllFetch, isLoading: isLoadingGroups, error: groupAllFetchError, execute: groupAllFetchApi } = useFetch();
 const { error: groupDeletedError, isLoading: isDeleting, execute: groupDeletedApi } = useMutation();
 const { data: deviceData, error: deviceError, execute: deviceFetchApi } = useFetch();
-
-// ⚡ NEW: Protocol Fetching
 const { data: protocolData, error: protocolError, execute: protocolFetchApi } = useFetch();
 
 const groupModal = ref(null);
@@ -195,11 +273,49 @@ const groupToDelete = ref(null);
 const deviceOptions = ref([]);
 const protocolList = ref([]);
 
+// Dynamic bilingual summary stats
+const statCardsData = computed(() => {
+  const total = groupTable.value.length;
+  const assignedDevices = groupTable.value.reduce((acc, g) => acc + (g.deviceIds?.length || 0), 0);
+  const withProtocol = groupTable.value.filter(g => g.protocol && g.protocol !== 'none').length;
+  const empty = groupTable.value.filter(g => !g.deviceIds || g.deviceIds.length === 0).length;
+
+  return [
+    {
+      label: t('deviceGroup.stats.total'),
+      value: total,
+      icon: 'lucide:layers',
+      color: 'primary'
+    },
+    {
+      label: t('deviceGroup.stats.assignedDevices'),
+      value: assignedDevices,
+      icon: 'lucide:cpu',
+      color: 'info',
+      valueClass: 'text-info'
+    },
+    {
+      label: t('deviceGroup.stats.withProtocol'),
+      value: withProtocol,
+      icon: 'lucide:network',
+      color: 'success',
+      valueClass: 'text-success'
+    },
+    {
+      label: t('deviceGroup.stats.empty'),
+      value: empty,
+      icon: 'lucide:folder-x',
+      color: empty > 0 ? 'warning' : 'ghost',
+      valueClass: empty > 0 ? 'text-warning' : 'text-base-content/50'
+    }
+  ];
+});
+
 const tableColumns = computed(() => [
   { header: t('common.id'), accessorKey: 'groupId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
   { header: t('deviceGroup.groupName'), accessorKey: 'groupName' },
   { header: t('common.description'), accessorKey: 'description' },
-  { header: t('common.protocol'), accessorKey: 'protocol' }, // ⚡ Added to Table
+  { header: t('common.protocol'), accessorKey: 'protocol' },
   { header: t('common.devices'), id: 'deviceCount', enableSorting: false },
   { header: t('common.actions'), id: 'actions', enableSorting: false, meta: { headerClass: 'text-right', cellClass: 'text-right' } }
 ]);
@@ -207,7 +323,7 @@ const tableColumns = computed(() => [
 const form = ref({
   groupName: '',
   description: '',
-  protocol: 'none', // ⚡ Default to none
+  protocol: 'none',
   deviceIds: []
 });
 
@@ -254,7 +370,7 @@ const openEditModal = (group) => {
   form.value = {
     groupName: group.groupName,
     description: group.description || '',
-    protocol: group.protocol || 'none', // ⚡ Map null to 'none' for UI
+    protocol: group.protocol || 'none',
     deviceIds: group.deviceIds || []
   };
   v$.value.$reset();
@@ -284,7 +400,7 @@ const submitForm = async () => {
   const payload = {
     groupName: form.value.groupName,
     description: form.value.description,
-    protocol: form.value.protocol === 'none' ? null : form.value.protocol, // ⚡ Strip 'none' back to null for DB
+    protocol: form.value.protocol === 'none' ? null : form.value.protocol,
     deviceIds: form.value.deviceIds
   };
 
