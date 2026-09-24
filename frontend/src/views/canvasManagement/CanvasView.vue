@@ -1,7 +1,5 @@
 <template>
-  <NoAccess v-if="!hasPermission(mainMenuName, 'Display')" />
-
-  <div v-else class="p-4 sm:p-6 w-full mx-auto">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
 
     <div
       class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -108,6 +106,8 @@
     </dialog>
 
   </div>
+
+  <NoAccess v-else />
 </template>
 
 <script setup>

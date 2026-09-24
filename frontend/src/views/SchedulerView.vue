@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="h-full w-full p-6 bg-base-200 overflow-y-auto">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
 
     <!-- Page Header Card -->
     <div

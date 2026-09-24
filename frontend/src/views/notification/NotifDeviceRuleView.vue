@@ -1,8 +1,8 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full mx-auto p-4 flex flex-col h-full gap-4">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
 
     <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div class="flex items-center gap-4">
         <div class="p-3 bg-error/10 text-error rounded-xl flex items-center justify-center">
           <Icon icon="lucide:siren" class="w-7 h-7" />
