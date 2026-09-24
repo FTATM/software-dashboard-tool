@@ -352,8 +352,8 @@
           <div class="flex gap-3 items-start">
             <Icon icon="lucide:info" class="w-5 h-5 text-info shrink-0 mt-0.5" />
             <div>
-              <p class="font-bold text-info-content mb-1">{{ $t('device.import.requirementsTitle') }}</p>
-              <ul class="list-disc list-inside space-y-1 text-info-content/80 ml-1">
+              <p class="font-bold text-base mb-1">{{ $t('device.import.requirementsTitle') }}</p>
+              <ul class="list-disc list-inside space-y-1 text-base ml-1">
                 <li><strong>{{ $t('device.import.supportedFormats') }}</strong></li>
                 <li><strong>{{ $t('device.import.requiredColumns') }}</strong>
                   <code class="bg-base-100/50 text-info font-bold px-1.5 py-0.5 rounded">deviceName</code>,
