@@ -94,7 +94,7 @@
         </div>
       </div>
 
-      <div class="flex-1 min-h-[500px] w-full relative" :class="{ 'show-grid-overlay': showGrid }"
+      <div class="flex-1 min-h-[500px] w-full relative pd-96" :class="{ 'show-grid-overlay': showGrid }"
         @dragover.prevent="onDragOver" @drop="onDrop">
         <GridLayout v-model:layout="activeLayout" :col-num="12" :row-height="30" :is-draggable="true"
           :is-resizable="true" :vertical-compact="false" :prevent-collision="currentCanvasSettings.lock">
@@ -1002,5 +1002,11 @@ onUnmounted(() => {
     repeating-linear-gradient(to bottom, lightgrey 0px, lightgrey 1px, transparent 1px, transparent 40px);
   pointer-events: none;
   z-index: 0;
+}
+
+:deep(.vgl-layout) {
+  min-height: calc(100vh - 220px);
+  padding-bottom: 24rem !important; /* Matches pb-96 (384px) */
+  box-sizing: content-box !important;
 }
 </style>
