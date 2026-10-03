@@ -80,7 +80,7 @@ func (s *scheduleService) CreateSchedule(ctx context.Context, createdSched *mode
 
 	defer tx.Rollback(ctx)
 
-	if err = s.scheduleRepo.Create(ctx, &sched); err != nil {
+	if err = s.scheduleRepo.Create(tx.Context(), &sched); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
@@ -101,7 +101,7 @@ func (s *scheduleService) CreateSchedule(ctx context.Context, createdSched *mode
 
 	auditlogs = append(auditlogs, audit)
 
-	if err = s.auditLogRepo.Create(ctx, auditlogs); err != nil {
+	if err = s.auditLogRepo.Create(tx.Context(), auditlogs); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
@@ -159,7 +159,7 @@ func (s *scheduleService) UpdateSchedule(ctx context.Context, updateSchedReq *mo
 
 	defer tx.Rollback(ctx)
 
-	if err = s.scheduleRepo.Update(ctx, &sched); err != nil {
+	if err = s.scheduleRepo.Update(tx.Context(), &sched); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
@@ -183,7 +183,7 @@ func (s *scheduleService) UpdateSchedule(ctx context.Context, updateSchedReq *mo
 	}
 	auditlogs = append(auditlogs, audit)
 
-	if err = s.auditLogRepo.Create(ctx, auditlogs); err != nil {
+	if err = s.auditLogRepo.Create(tx.Context(), auditlogs); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
@@ -210,7 +210,7 @@ func (s *scheduleService) DeleteSchedule(ctx context.Context, schedId string, au
 
 	defer tx.Rollback(ctx)
 
-	err = s.scheduleRepo.Delete(ctx, schedId)
+	err = s.scheduleRepo.Delete(tx.Context(), schedId)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
