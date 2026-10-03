@@ -69,7 +69,7 @@ func (s *userService) CreateUser(ctx context.Context, createUser *model.CreateUs
 
 	defer tx.Rollback(ctx)
 
-	err = s.userRepo.Create(ctx, &user)
+	err = s.userRepo.Create(tx.Context(), &user)
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -147,7 +147,7 @@ func (s *userService) UpdateUser(ctx context.Context, updateUser *model.UpdateUs
 
 	defer tx.Rollback(ctx)
 
-	err = s.userRepo.Update(ctx, &user)
+	err = s.userRepo.Update(tx.Context(), &user)
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -353,7 +353,7 @@ func (s *userService) DeleteUser(ctx context.Context, deleteUserId, authUserId i
 
 	defer tx.Rollback(ctx)
 
-	err = s.userRepo.Delete(ctx, deleteUserId)
+	err = s.userRepo.Delete(tx.Context(), deleteUserId)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -408,7 +408,7 @@ func (s *userService) UserLinkLineUserToken(ctx context.Context, linkLine model.
 
 	defer tx.Rollback(ctx)
 
-	err = s.userRepo.UpdateLineUserToken(ctx, user.UserId, linkLine.LineUserToken)
+	err = s.userRepo.UpdateLineUserToken(tx.Context(), user.UserId, linkLine.LineUserToken)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}

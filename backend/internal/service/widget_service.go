@@ -167,7 +167,7 @@ func (s *widgetService) UpsertWidget(ctx context.Context, upsertWidget *model.Up
 	defer tx.Rollback(ctx)
 
 	if upsertWidget.CanvasStyle != nil {
-		oldCanvas, err := s.canvasRepo.GetById(ctx, upsertWidget.CanvasId)
+		oldCanvas, err := s.canvasRepo.GetById(tx.Context(), upsertWidget.CanvasId)
 		if err != nil {
 			return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 		}

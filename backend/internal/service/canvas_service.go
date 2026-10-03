@@ -154,12 +154,12 @@ func (s *canvasService) UpsertCanvasRole(ctx context.Context, upsertCanvasRole *
 
 	defer tx.Rollback(ctx)
 
-	err = s.canvasRepo.CreateCanvasRole(ctx, createCanvasRole)
+	err = s.canvasRepo.CreateCanvasRole(tx.Context(), createCanvasRole)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
-	err = s.canvasRepo.DeleteCanvasRole(ctx, deleteCanvasRole)
+	err = s.canvasRepo.DeleteCanvasRole(tx.Context(), deleteCanvasRole)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -212,7 +212,7 @@ func (s *canvasService) CreateCanvas(ctx context.Context, createCanvas *model.Cr
 
 	defer tx.Rollback(ctx)
 
-	err = s.canvasRepo.Create(ctx, &canvas)
+	err = s.canvasRepo.Create(tx.Context(), &canvas)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -276,7 +276,7 @@ func (s *canvasService) UpdateCanvas(ctx context.Context, updateCanvas *model.Up
 
 	defer tx.Rollback(ctx)
 
-	err = s.canvasRepo.Update(ctx, &canvas)
+	err = s.canvasRepo.Update(tx.Context(), &canvas)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -324,7 +324,7 @@ func (s *canvasService) DeleteCanvas(ctx context.Context, canvasId int, authUser
 
 	defer tx.Rollback(ctx)
 
-	err = s.canvasRepo.Delete(ctx, canvasId)
+	err = s.canvasRepo.Delete(tx.Context(), canvasId)
 	if err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
