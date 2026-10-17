@@ -191,7 +191,6 @@ func (h *DeviceGatewayHandler) HTTPTelemetry(w http.ResponseWriter, r *http.Requ
 
 // HTTPCommandPolling allows HTTP physical devices to fetch queued commands via GET
 func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http.Request) {
-	var res Response
 	var allCommands []model.DeviceCommand
 
 	ctx := r.Context()
@@ -201,14 +200,14 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 		// --- NEW: Validate Group Protocol ---
 		deviceIds, groupProtocol, err := h.cacheService.GetGroupInfoByName(ctx, groupName)
 		if err != nil || len(deviceIds) == 0 {
-			res.Message = "Group not found or contains no devices"
-			respondJson(w, http.StatusNotFound, &res)
+			slog.WarnContext(ctx, "Group not found or contains no devices")
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		if groupProtocol != "HTTP" {
-			res.Message = "Group is not configured for HTTP protocol"
-			respondJson(w, http.StatusBadRequest, &res)
+			slog.WarnContext(ctx, "Group is not configured for HTTP protocol")
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		// ------------------------------------
@@ -223,21 +222,21 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 	} else {
 		deviceName := r.URL.Query().Get("device")
 		if deviceName == "" {
-			res.Message = "Missing 'device' or 'device-group' parameter"
-			respondJson(w, http.StatusBadRequest, &res)
+			slog.WarnContext(ctx, "Missing 'device' or 'device-group' parameter")
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		deviceId, protocol, err := h.cacheService.GetDeviceInfoByName(ctx, deviceName)
 		if err != nil || deviceId <= 0 {
-			res.Message = "Device not found"
-			respondJson(w, http.StatusNotFound, &res)
+			slog.WarnContext(ctx, "Device not found")
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		if protocol != "HTTP" {
-			res.Message = "Device is not configured for HTTP protocol"
-			respondJson(w, http.StatusBadRequest, &res)
+			slog.WarnContext(ctx, "Device is not configured for HTTP protocol")
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -248,12 +247,13 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 	}
 
 	if len(allCommands) == 0 {
-		respondJson(w, http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	res.Data = allCommands
-	respondJson(w, http.StatusOK, &res)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(allCommands)
 }
 
 func (h *DeviceGatewayHandler) DeviceStatus(w http.ResponseWriter, r *http.Request) {
