@@ -26,9 +26,10 @@
 
       <div class="flex flex-col gap-3 overflow-y-auto pr-2">
         <div v-for="tool in availableTools" :key="tool.type"
-          class="flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300 rounded-box cursor-grab transition-all duration-200 hover:bg-base-200 hover:border-primary hover:shadow-sm active:cursor-grabbing"
+          class="flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300 rounded-box cursor-grab transition-all duration-200 hover:bg-base-200 hover:border-[#6388bf] hover:shadow-sm active:cursor-grabbing"
           draggable="true" @dragstart="onDragStart($event, tool.type)" @dragend="onDragEnd">
-          <Icon :icon="tool.icon" :rotate="tool.rotate || ''" class="w-6 h-6 text-primary shrink-0" />
+          <!-- Changed text-primary to text-[#6388bf] -->
+          <Icon :icon="tool.icon" :rotate="tool.rotate || ''" class="w-6 h-6 text-[#6388bf] shrink-0" />
           <span class="text-sm font-medium text-base-content">{{ tool.name }}</span>
         </div>
       </div>
@@ -196,7 +197,7 @@
         <div class="modal-action">
           <button type="button" @click="closeDeleteModal" class="btn btn-ghost">{{ $t('common.noCancel') }}</button>
           <button type="button" @click="confirmDelete" class="btn btn-error text-white">{{ $t('common.yesDelete')
-            }}</button>
+          }}</button>
         </div>
       </div>
       <form method="dialog" class="modal-backdrop"><button @click="closeDeleteModal">close</button></form>
@@ -282,7 +283,7 @@
                     </template>
                     <span v-else class="text-xs text-base-content/50 font-medium my-auto italic">{{
                       $t('canvasDesign.noDevicesInGroup')
-                      }}</span>
+                    }}</span>
                   </div>
                 </div>
               </div>
@@ -315,7 +316,7 @@
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.start')
-                      }}</span>
+                    }}</span>
                     <input type="color" v-model="configForm.widgetStyle.bgHex"
                       class="h-9 w-full cursor-pointer rounded border border-base-300 p-0 shadow-sm" />
                   </div>
@@ -323,14 +324,14 @@
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.end')
-                      }}</span>
+                    }}</span>
                     <input type="color" v-model="configForm.widgetStyle.bgHex2"
                       class="h-9 w-full cursor-pointer rounded border border-base-300 p-0 shadow-sm" />
                   </div>
                   <div class="flex-1 flex flex-col gap-1.5 w-full">
                     <span class="text-[10px] text-base-content/60 font-bold uppercase tracking-wider">{{
                       $t('canvasDesign.angle')
-                      }}</span>
+                    }}</span>
                     <select v-model="configForm.widgetStyle.bgGradientDir"
                       class="select select-bordered select-sm h-9 w-full">
                       <option value="135deg">{{ $t('canvasDesign.directions.diagonal1') }}</option>
@@ -1006,7 +1007,8 @@ onUnmounted(() => {
 
 :deep(.vgl-layout) {
   min-height: calc(100vh - 220px);
-  padding-bottom: 24rem !important; /* Matches pb-96 (384px) */
+  padding-bottom: 24rem !important;
+  /* Matches pb-96 (384px) */
   box-sizing: content-box !important;
 }
 </style>
