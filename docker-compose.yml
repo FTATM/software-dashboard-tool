@@ -155,7 +155,7 @@ services:
       POSTGRES_PASSWORD: "${DB_PASSWORD:?error: DB_PASSWORD not set}"
       POSTGRES_DB: "${DB_NAME:?error: DB_NAME not set}"
     ports:
-      - "${DB_PORT:?error: DB_PORT not set}:5432"
+      - "5432:${DB_PORT:?error: DB_PORT not set}"
     volumes:
       # Mount the init.sql file to run automatically
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
