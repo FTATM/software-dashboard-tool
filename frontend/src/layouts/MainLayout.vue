@@ -167,13 +167,13 @@
         <div class="flex items-center gap-2.5">
 
           <!-- Company Badge -->
-          <!-- <div
+          <div
             class="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-base-200/50 border border-base-300 opacity-70 hover:opacity-100 transition-opacity">
             <span class="text-[10px] text-base-content/60 font-medium">{{ $t('header.poweredBy') }}</span>
             <img src="/LOGO_FT.png" alt="Company Logo" class="h-3.5 w-auto object-contain" />
-          </div> -->
+          </div>
 
-          <!-- <div class="h-4 w-px bg-base-300 mx-0.5 hidden md:block"></div> -->
+          <div class="h-4 w-px bg-base-300 mx-0.5 hidden md:block"></div>
 
           <!-- Language Switcher -->
           <div class="join bg-base-200 p-0.5 rounded-md border border-base-300 hidden sm:inline-flex">
