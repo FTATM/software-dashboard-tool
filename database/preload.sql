@@ -12,7 +12,8 @@ INSERT INTO menu (menu_name)
 VALUES 
     ('Dashboard'), ('Canvas'), ('Canvas Design'), ('Canvas Access'), 
     ('Scheduler'), ('Log Report'), ('Notification User'), 
-    ('Notification Device'), ('User'), ('Role'), ('Device'), ('Device Group')
+    ('Notification Device'), ('Notification Maintenance'),
+    ('User'), ('Role'), ('Device'), ('Device Group')
 ON CONFLICT (menu_name) DO NOTHING;
 
 -- 3. Actions
@@ -25,18 +26,19 @@ ON CONFLICT (action_name) DO NOTHING;
 -- 4. Map Actions to Menus (Consolidated Single Statement)
 WITH menu_action_mapping (menu_name, action_names) AS (
     VALUES
-        ('Dashboard',           ARRAY['Display', 'Query']),
-        ('Device',              ARRAY['Display', 'Create', 'Update', 'Delete', 'Import', 'Export', 'Command']),
-        ('Device Group',        ARRAY['Display', 'Create', 'Update', 'Delete']),
-        ('User',                ARRAY['Display', 'Create', 'Update', 'Delete']),
-        ('Role',                ARRAY['Display', 'Create', 'Update', 'Delete']),
-        ('Canvas',              ARRAY['Display', 'Create', 'Update', 'Delete']),
-        ('Canvas Design',       ARRAY['Display', 'Update']),
-        ('Canvas Access',       ARRAY['Display', 'Update']),
-        ('Scheduler',           ARRAY['Display', 'Create', 'Update', 'Delete']),
-        ('Log Report',          ARRAY['Display', 'Export']),
-        ('Notification User',   ARRAY['Display', 'Update']),
-        ('Notification Device', ARRAY['Display', 'Create', 'Update', 'Delete'])
+        ('Dashboard',                ARRAY['Display', 'Query']),
+        ('Device',                   ARRAY['Display', 'Create', 'Update', 'Delete', 'Import', 'Export', 'Command']),
+        ('Device Group',             ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('User',                     ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('Role',                     ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('Canvas',                   ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('Canvas Design',            ARRAY['Display', 'Update']),
+        ('Canvas Access',            ARRAY['Display', 'Update']),
+        ('Scheduler',                ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('Log Report',               ARRAY['Display', 'Export']),
+        ('Notification User',        ARRAY['Display', 'Update']),
+        ('Notification Device',      ARRAY['Display', 'Create', 'Update', 'Delete']),
+        ('Notification Maintenance', ARRAY['Display', 'Create', 'Update', 'Delete'])
 )
 INSERT INTO menu_action (menu_id, action_id)
 SELECT m.menu_id, a.action_id

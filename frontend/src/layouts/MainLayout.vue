@@ -98,7 +98,8 @@
               </router-link>
             </li>
 
-            <li v-if="hasPermission('Notification User', 'Display') || hasPermission('Notification Device', 'Display')">
+            <li
+              v-if="hasPermission('Notification User', 'Display') || hasPermission('Notification Device', 'Display') || hasPermission('Notification Maintenance', 'Display')">
               <details>
                 <summary class="py-3 px-4 rounded-xl flex items-center gap-3">
                   <Icon icon="lucide:bell" class="w-5 h-5 opacity-70" />
@@ -115,6 +116,12 @@
                     <router-link :to="{ name: 'notifDevicerule' }" active-class="!text-primary !bg-primary/10 font-bold"
                       @click="isSidebarOpen = false" class="py-2.5 px-4 rounded-lg">
                       {{ $t('menu.notifDeviceRule') }}
+                    </router-link>
+                  </li>
+                  <li v-if="hasPermission('Notification Maintenance', 'Display')">
+                    <router-link :to="{ name: 'notifMaintenance' }" active-class="!text-primary !bg-primary/10 font-bold"
+                      @click="isSidebarOpen = false" class="py-2.5 px-4 rounded-lg">
+                      {{ $t('menu.notifMaintenance') }}
                     </router-link>
                   </li>
                 </ul>

@@ -16,6 +16,14 @@ type notificationRepo struct {
 }
 
 func NewNotificationRepository(pool *pgxpool.Pool) model.NotificationRepository {
+	if pool != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, _ = pool.Exec(ctx, `
+			ALTER TABLE IF EXISTS maintenance_notification ADD COLUMN IF NOT EXISTS interval_days INT;
+			ALTER TABLE IF EXISTS maintenance_notification ADD COLUMN IF NOT EXISTS notif_sent_count INT NOT NULL DEFAULT 0;
+		`)
+	}
 	return &notificationRepo{pool: pool, prefixError: "notificationRepo"}
 }
 
@@ -282,4 +290,309 @@ func (r *notificationRepo) GetActiveUsersNotif(ctx context.Context) ([]model.Use
 	}
 
 	return usersNotif, nil
+}
+
+// --- Maintenance Notification Repository Methods ---
+
+func (r *notificationRepo) GetMaintenanceAllDetail(ctx context.Context) ([]model.MaintenanceNotificationDetail, error) {
+	const fname = "GetMaintenanceAllDetail"
+	query := `
+		SELECT 
+			m.maintenance_id,
+			m.device_id,
+			m.device_group_id,
+			m.start_date,
+			m.maintenance_date,
+			m.interval_days,
+			m.day_count,
+			COALESCE(m.reason, '') AS reason,
+			m.active,
+			m.notified,
+			m.notif_sent_count,
+			m.last_counted_at,
+			m.last_notified_at,
+			COALESCE(d.device_name, 'Unknown') AS device_name,
+			COALESCE(g.group_name, 'Unknown') AS group_name
+		FROM maintenance_notification m
+		LEFT JOIN device d ON m.device_id = d.device_id
+		LEFT JOIN device_group g ON m.device_group_id = g.group_id
+		ORDER BY m.maintenance_id ASC
+	`
+	rows, err := r.db(ctx).Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	items, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[model.MaintenanceNotificationDetail])
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	return items, nil
+}
+
+func (r *notificationRepo) GetActiveMaintenanceDetails(ctx context.Context) ([]model.MaintenanceNotificationDetail, error) {
+	const fname = "GetActiveMaintenanceDetails"
+	query := `
+		SELECT 
+			m.maintenance_id,
+			m.device_id,
+			m.device_group_id,
+			m.start_date,
+			m.maintenance_date,
+			m.interval_days,
+			m.day_count,
+			COALESCE(m.reason, '') AS reason,
+			m.active,
+			m.notified,
+			m.notif_sent_count,
+			m.last_counted_at,
+			m.last_notified_at,
+			COALESCE(d.device_name, 'Unknown') AS device_name,
+			COALESCE(g.group_name, 'Unknown') AS group_name
+		FROM maintenance_notification m
+		LEFT JOIN device d ON m.device_id = d.device_id
+		LEFT JOIN device_group g ON m.device_group_id = g.group_id
+		WHERE m.active = TRUE
+		  AND (
+			  (m.device_id IS NOT NULL AND d.active = TRUE AND d.deleted_at IS NULL)
+			  OR (m.device_group_id IS NOT NULL AND g.group_id IS NOT NULL)
+		  )
+		ORDER BY m.maintenance_id ASC
+	`
+	rows, err := r.db(ctx).Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	items, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[model.MaintenanceNotificationDetail])
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	return items, nil
+}
+
+func (r *notificationRepo) GetMaintenanceDetailById(ctx context.Context, maintenanceId int) (*model.MaintenanceNotificationDetail, error) {
+	const fname = "GetMaintenanceDetailById"
+	query := `
+		SELECT 
+			m.maintenance_id,
+			m.device_id,
+			m.device_group_id,
+			m.start_date,
+			m.maintenance_date,
+			m.interval_days,
+			m.day_count,
+			COALESCE(m.reason, '') AS reason,
+			m.active,
+			m.notified,
+			m.notif_sent_count,
+			m.last_counted_at,
+			m.last_notified_at,
+			COALESCE(d.device_name, 'Unknown') AS device_name,
+			COALESCE(g.group_name, 'Unknown') AS group_name
+		FROM maintenance_notification m
+		LEFT JOIN device d ON m.device_id = d.device_id
+		LEFT JOIN device_group g ON m.device_group_id = g.group_id
+		WHERE m.maintenance_id = $1
+		  AND m.active = TRUE
+		  AND (
+			  (m.device_id IS NOT NULL AND d.active = TRUE AND d.deleted_at IS NULL)
+			  OR (m.device_group_id IS NOT NULL AND g.group_id IS NOT NULL)
+		  )
+	`
+	rows, err := r.db(ctx).Query(ctx, query, maintenanceId)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	item, err := pgx.CollectOneRow(rows, pgx.RowToStructByNameLax[model.MaintenanceNotificationDetail])
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	return &item, nil
+}
+
+func (r *notificationRepo) GetMaintenanceById(ctx context.Context, maintenanceId int) (*model.MaintenanceNotification, error) {
+	const fname = "GetMaintenanceById"
+	var item model.MaintenanceNotification
+
+	query := `
+		SELECT 
+			maintenance_id, device_id, device_group_id, start_date, maintenance_date, interval_days,
+			day_count, COALESCE(reason, '') AS reason, active, notified, notif_sent_count, last_counted_at, last_notified_at
+		FROM maintenance_notification
+		WHERE maintenance_id = $1
+	`
+
+	err := r.db(ctx).QueryRow(ctx, query, maintenanceId).Scan(
+		&item.MaintenanceId,
+		&item.DeviceId,
+		&item.DeviceGroupId,
+		&item.StartDate,
+		&item.MaintenanceDate,
+		&item.IntervalDays,
+		&item.DayCount,
+		&item.Reason,
+		&item.Active,
+		&item.Notified,
+		&item.NotifSentCount,
+		&item.LastCountedAt,
+		&item.LastNotifiedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	return &item, nil
+}
+
+func (r *notificationRepo) CreateMaintenance(ctx context.Context, item *model.MaintenanceNotification) error {
+	const fname = "CreateMaintenance"
+	query := `
+		INSERT INTO maintenance_notification (
+			device_id, device_group_id, start_date, maintenance_date, interval_days,
+			day_count, reason, active, notified, notif_sent_count, last_counted_at, created_at, updated_at
+		)
+		VALUES (
+			$1, $2, $3, $4, $5,
+			GREATEST(0, (CURRENT_DATE - ($3::timestamptz)::date)),
+			$6, $7, FALSE, 0, now(), now(), now()
+		)
+		RETURNING maintenance_id, day_count
+	`
+	err := r.db(ctx).QueryRow(
+		ctx,
+		query,
+		item.DeviceId,
+		item.DeviceGroupId,
+		item.StartDate,
+		item.MaintenanceDate,
+		item.IntervalDays,
+		item.Reason,
+		item.Active,
+	).Scan(&item.MaintenanceId, &item.DayCount)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	return nil
+}
+
+func (r *notificationRepo) UpdateMaintenance(ctx context.Context, item model.MaintenanceNotification) error {
+	const fname = "UpdateMaintenance"
+	query := `
+		UPDATE maintenance_notification
+		SET 
+			device_id = $1,
+			device_group_id = $2,
+			start_date = $3,
+			maintenance_date = $4,
+			interval_days = $5,
+			day_count = GREATEST(0, (CURRENT_DATE - ($3::timestamptz)::date)),
+			reason = $6,
+			active = $7,
+			notified = CASE 
+				WHEN maintenance_date <> $4::timestamptz OR start_date <> $3::timestamptz THEN FALSE
+				WHEN $4::timestamptz > now() THEN FALSE
+				ELSE notified
+			END,
+			notif_sent_count = CASE 
+				WHEN maintenance_date <> $4::timestamptz OR start_date <> $3::timestamptz THEN 0
+				WHEN $4::timestamptz > now() THEN 0
+				ELSE notif_sent_count
+			END,
+			last_notified_at = CASE 
+				WHEN maintenance_date <> $4::timestamptz OR start_date <> $3::timestamptz THEN NULL
+				WHEN $4::timestamptz > now() THEN NULL
+				ELSE last_notified_at
+			END,
+			last_counted_at = now(),
+			updated_at = now()
+		WHERE maintenance_id = $8
+	`
+	rows, err := r.db(ctx).Exec(
+		ctx,
+		query,
+		item.DeviceId,
+		item.DeviceGroupId,
+		item.StartDate,
+		item.MaintenanceDate,
+		item.IntervalDays,
+		item.Reason,
+		item.Active,
+		item.MaintenanceId,
+	)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	if rows.RowsAffected() != 1 {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, pgx.ErrNoRows)
+	}
+	return nil
+}
+
+func (r *notificationRepo) DeleteMaintenance(ctx context.Context, maintenanceId int) error {
+	const fname = "DeleteMaintenance"
+	query := `DELETE FROM maintenance_notification WHERE maintenance_id = $1`
+
+	rows, err := r.db(ctx).Exec(ctx, query, maintenanceId)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	if rows.RowsAffected() != 1 {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, pgx.ErrNoRows)
+	}
+	return nil
+}
+
+func (r *notificationRepo) UpdateMaintenanceDayCount(ctx context.Context, maintenanceId int, dayCount int) error {
+	const fname = "UpdateMaintenanceDayCount"
+	query := `
+		UPDATE maintenance_notification
+		SET day_count = $1, last_counted_at = now(), updated_at = now()
+		WHERE maintenance_id = $2
+	`
+	_, err := r.db(ctx).Exec(ctx, query, dayCount, maintenanceId)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	return nil
+}
+
+func (r *notificationRepo) MarkMaintenanceNotified(ctx context.Context, maintenanceId int, maxRepeat int) (int, bool, error) {
+	const fname = "MarkMaintenanceNotified"
+	query := `
+		UPDATE maintenance_notification m
+		SET 
+			notified = TRUE,
+			notif_sent_count = m.notif_sent_count + 1,
+			last_notified_at = now(),
+			updated_at = now()
+		WHERE m.maintenance_id = $1
+		  AND m.active = TRUE
+		  AND (
+			  (m.notif_sent_count = 0 AND now() >= m.maintenance_date)
+			  OR (
+				  m.notif_sent_count > 0
+				  AND m.notif_sent_count <= $2
+				  AND now() >= m.maintenance_date + (m.notif_sent_count * INTERVAL '1 day')
+				  AND (m.last_notified_at IS NULL OR now() >= m.last_notified_at + INTERVAL '1 day')
+			  )
+		  )
+		  AND (
+			  (m.device_id IS NOT NULL AND EXISTS (SELECT 1 FROM device d WHERE d.device_id = m.device_id AND d.active = TRUE AND d.deleted_at IS NULL))
+			  OR (m.device_group_id IS NOT NULL AND EXISTS (SELECT 1 FROM device_group g WHERE g.group_id = m.device_group_id))
+		  )
+		RETURNING notif_sent_count;
+	`
+	var newCount int
+	err := r.db(ctx).QueryRow(ctx, query, maintenanceId, maxRepeat).Scan(&newCount)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return 0, false, nil
+		}
+		return 0, false, fmt.Errorf("[%s]>[%s] failed to mark notified: %w", r.prefixError, fname, err)
+	}
+	return newCount, true, nil
 }

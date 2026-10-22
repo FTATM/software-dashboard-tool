@@ -33,7 +33,8 @@
     "user": "ผู้ใช้งาน",
     "role": "ตำแหน่งและสิทธิ์",
     "device": "อุปกรณ์",
-    "deviceGroup": "กลุ่มอุปกรณ์"
+    "deviceGroup": "กลุ่มอุปกรณ์",
+    "notifMaintenance": "แจ้งเตือนการซ่อมบำรุง"
   },
   "settings": {
     "language": "ภาษา",
@@ -959,6 +960,50 @@
       "uploadFailed": "การอัปโหลดรูปภาพล้มเหลว",
       "fileTooLarge": "ไฟล์มีขนาดใหญ่เกิน 10 MB.",
       "fileNotAllowed": "ได้แค่ไฟล์ (PNG, JPG, GIF, WEBP) ถึงอัพโหลดได้"
+    }
+  },
+  "notifMaintenance": {
+    "title": "แจ้งเตือนชั่วโมงการทำงานและรอบซ่อมบำรุง",
+    "subtitle": "นับเวลาและชั่วโมงการทำงานของอุปกรณ์หรือกลุ่มอุปกรณ์ พร้อมแจ้งเตือนเมื่อถึงกำหนดตรวจซ่อมบำรุง",
+    "addMaintenance": "เพิ่มรายการซ่อมบำรุง",
+    "editMaintenance": "แก้ไขกำหนดการซ่อมบำรุง",
+    "createMaintenance": "สร้างกำหนดการซ่อมบำรุง",
+    "startDate": "วันที่เริ่มนับ",
+    "selectStartDate": "เลือกวันที่และเวลาเริ่มนับ",
+    "maintenanceDate": "วันที่ตรวจซ่อมบำรุง",
+    "selectMaintenanceDate": "เลือกวันที่และเวลาซ่อมบำรุง",
+    "dateSelectionMode": "รูปแบบการกำหนดวันซ่อมบำรุง",
+    "modeByDate": "เลือกตามวันที่",
+    "modeByDays": "เลือกตามจำนวนวัน",
+    "intervalDays": "จำนวนวัน (รอบซ่อมบำรุง)",
+    "intervalDaysPlaceholder": "เช่น 180",
+    "alertTime": "เวลาที่แจ้งเตือน",
+    "selectAlertTime": "เลือกเวลา",
+    "calculatedDueDate": "วันครบกำหนดซ่อมบำรุงที่คำนวณได้",
+    "resetCycle": "รีเซ็ตรอบเวลา (+{days} วัน)",
+    "resetCycleDesc": "ตั้งวันที่เริ่มนับเป็นปัจจุบัน และนับรอบซ่อมบำรุงถัดไปอีก {days} วัน",
+    "cycleResetToast": "รีเซ็ตวันเริ่มนับเป็นปัจจุบัน และตั้งวันซ่อมบำรุงถัดไปอีก +{days} วันแล้ว",
+    "operatingCount": "เวลาทำงานสะสม",
+    "daysCount": "{days} วัน",
+    "hoursCount": "{hours} ชม.",
+    "targetDaysLabel": "รอบกำหนด: {total} วัน",
+    "maintenanceNote": "รายละเอียดการซ่อมบำรุง (สาเหตุ)",
+    "maintenanceNotePlaceholder": "เช่น ตรวจเช็คลูกปืนและเปลี่ยนไส้กรองตามรอบ",
+    "maintenanceNoteDesc": "ข้อความนี้จะถูกแนบไปกับการแจ้งเตือนที่ส่งถึงผู้ใช้งานเมื่อถึงวันซ่อมบำรุง",
+    "noReason": "ครบกำหนดตรวจซ่อมบำรุงตามรอบเวลา",
+    "maintenanceStatus": "สถานะการนับเวลาซ่อมบำรุง",
+    "maintenanceStatusDesc": "หากปิดใช้งาน ระบบจะหยุดนับเวลาและไม่ส่งแจ้งเตือนสำหรับรายการนี้",
+    "statusCounting": "กำลังนับเวลา",
+    "statusNearMaintenance": "ใกล้ถึงกำหนด",
+    "statusMaintenance": "ถึงกำหนดซ่อมบำรุง",
+    "statusLate": "เลยกำหนด",
+    "deleteWarning": "คุณแน่ใจหรือไม่ว่าต้องการลบกำหนดการซ่อมบำรุงของ \"{name}\"? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    "validation": {
+      "startDateRequired": "กรุณาเลือกวันที่เริ่มนับ",
+      "maintenanceDateRequired": "กรุณาเลือกวันที่ตรวจซ่อมบำรุง",
+      "maintenanceAfterStart": "วันที่ตรวจซ่อมบำรุงต้องไม่น้อยกว่าวันที่เริ่มนับ",
+      "intervalDaysRequired": "กรุณาระบุจำนวนวัน",
+      "intervalDaysMin": "จำนวนวันต้องอย่างน้อย 1 วัน"
     }
   }
 }

@@ -6,10 +6,19 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/FTATM/software-dashboard-tool/internal/model"
 	"github.com/jackc/pgx/v5"
 )
+
+const ruleCacheTTL = 5 * time.Minute
+
+type cachedDeviceRules struct {
+	rules     []model.DeviceRuleNotification
+	expiresAt time.Time
+}
 
 type notificationService struct {
 	txManager         model.TransactionManager
@@ -19,6 +28,7 @@ type notificationService struct {
 	deviceDataAlert   chan []model.DeviceData
 	notifClient       model.NotificationClient
 	cooldownNotifSend int
+	deviceRuleCache   sync.Map // map[deviceId int]cachedDeviceRules
 }
 
 func NewNotificationService(txManager model.TransactionManager, repo model.NotificationRepository, auditLogRepo model.AuditLogRepository, notifClient model.NotificationClient, dataStream chan []model.DeviceData, cooldownNotifSend int) model.NotificationService {
@@ -31,6 +41,38 @@ func NewNotificationService(txManager model.TransactionManager, repo model.Notif
 		deviceDataAlert:   dataStream,
 		cooldownNotifSend: cooldownNotifSend,
 	}
+}
+
+func (s *notificationService) InvalidateDeviceRuleCache(deviceId int) {
+	if deviceId <= 0 {
+		s.deviceRuleCache.Range(func(key, _ any) bool {
+			s.deviceRuleCache.Delete(key)
+			return true
+		})
+		return
+	}
+	s.deviceRuleCache.Delete(deviceId)
+}
+
+func (s *notificationService) getCachedActiveRulesByDeviceId(ctx context.Context, deviceId int) ([]model.DeviceRuleNotification, error) {
+	if val, ok := s.deviceRuleCache.Load(deviceId); ok {
+		cached := val.(cachedDeviceRules)
+		if time.Now().Before(cached.expiresAt) {
+			return cached.rules, nil
+		}
+		s.deviceRuleCache.Delete(deviceId)
+	}
+
+	rules, err := s.notifRepo.GetActiveRulesByDeviceId(ctx, deviceId)
+	if err != nil {
+		return nil, err
+	}
+
+	s.deviceRuleCache.Store(deviceId, cachedDeviceRules{
+		rules:     rules,
+		expiresAt: time.Now().Add(ruleCacheTTL),
+	})
+	return rules, nil
 }
 
 func (s *notificationService) GetUserNotifAllDetail(ctx context.Context) ([]model.UserNotificationDetail, error) {
@@ -136,6 +178,7 @@ func (s *notificationService) CreateDeviceRule(ctx context.Context, rule *model.
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
+	s.InvalidateDeviceRuleCache(rule.DeviceId)
 	return nil
 }
 
@@ -178,6 +221,10 @@ func (s *notificationService) UpdateDeviceRule(ctx context.Context, rule model.D
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
+	if oldRule != nil {
+		s.InvalidateDeviceRuleCache(oldRule.DeviceId)
+	}
+	s.InvalidateDeviceRuleCache(rule.DeviceId)
 	return nil
 }
 
@@ -218,6 +265,160 @@ func (s *notificationService) DeleteDeviceRule(ctx context.Context, ruleId int, 
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
+	if oldRule != nil {
+		s.InvalidateDeviceRuleCache(oldRule.DeviceId)
+	}
+	return nil
+}
+
+// --- Maintenance Notification Service Methods ---
+
+func (s *notificationService) GetMaintenanceAllDetail(ctx context.Context) ([]model.MaintenanceNotificationDetail, error) {
+	const fname = "GetMaintenanceAllDetail"
+	items, err := s.notifRepo.GetMaintenanceAllDetail(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+	return items, nil
+}
+
+func (s *notificationService) CreateMaintenance(ctx context.Context, item *model.MaintenanceNotification, authUserId int) error {
+	const fname = "CreateMaintenance"
+
+	hasValidDevice := item.DeviceId != nil && *item.DeviceId > 0
+	hasValidGroup := item.DeviceGroupId != nil && *item.DeviceGroupId > 0
+	if hasValidDevice == hasValidGroup {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidBody)
+	}
+
+	if item.StartDate.IsZero() {
+		item.StartDate = time.Now()
+	}
+	if item.MaintenanceDate.IsZero() {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidBody)
+	}
+
+	tx, err := s.txManager.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err = s.notifRepo.CreateMaintenance(tx.Context(), item); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	newData, _ := model.StructToDynamicJSON(item)
+	audit := model.AuditLog{
+		EntityType: "maintenance_notification",
+		EntityId:   strconv.Itoa(item.MaintenanceId),
+		MenuType:   "Notification Maintenance",
+		Action:     model.CreateAction,
+		ChangedBy:  authUserId,
+		OldData:    nil,
+		NewData:    newData,
+	}
+
+	if err = s.auditLogRepo.Create(tx.Context(), []model.AuditLog{audit}); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	return nil
+}
+
+func (s *notificationService) UpdateMaintenance(ctx context.Context, item model.MaintenanceNotification, authUserId int) error {
+	const fname = "UpdateMaintenance"
+
+	hasValidDevice := item.DeviceId != nil && *item.DeviceId > 0
+	hasValidGroup := item.DeviceGroupId != nil && *item.DeviceGroupId > 0
+	if hasValidDevice == hasValidGroup {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidBody)
+	}
+
+	if item.StartDate.IsZero() || item.MaintenanceDate.IsZero() {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, model.ErrInvalidBody)
+	}
+
+	oldItem, err := s.notifRepo.GetMaintenanceById(ctx, item.MaintenanceId)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	tx, err := s.txManager.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err = s.notifRepo.UpdateMaintenance(tx.Context(), item); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	oldData, _ := model.StructToDynamicJSON(oldItem)
+	newData, _ := model.StructToDynamicJSON(item)
+
+	audit := model.AuditLog{
+		EntityType: "maintenance_notification",
+		EntityId:   strconv.Itoa(item.MaintenanceId),
+		MenuType:   "Notification Maintenance",
+		Action:     model.UpdateAction,
+		ChangedBy:  authUserId,
+		OldData:    oldData,
+		NewData:    newData,
+	}
+
+	if err = s.auditLogRepo.Create(tx.Context(), []model.AuditLog{audit}); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	return nil
+}
+
+func (s *notificationService) DeleteMaintenance(ctx context.Context, maintenanceId int, authUserId int) error {
+	const fname = "DeleteMaintenance"
+
+	oldItem, err := s.notifRepo.GetMaintenanceById(ctx, maintenanceId)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	tx, err := s.txManager.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err = s.notifRepo.DeleteMaintenance(tx.Context(), maintenanceId); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	oldData, _ := model.StructToDynamicJSON(oldItem)
+	audit := model.AuditLog{
+		EntityType: "maintenance_notification",
+		EntityId:   strconv.Itoa(maintenanceId),
+		MenuType:   "Notification Maintenance",
+		Action:     model.DeleteAction,
+		ChangedBy:  authUserId,
+		OldData:    oldData,
+		NewData:    nil,
+	}
+
+	if err = s.auditLogRepo.Create(tx.Context(), []model.AuditLog{audit}); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
 	return nil
 }
 
@@ -243,9 +444,12 @@ func (s *notificationService) evaluateBatch(dataBatch []model.DeviceData) {
 	ctx := context.Background()
 
 	for _, data := range dataBatch {
-		rules, err := s.notifRepo.GetActiveRulesByDeviceId(ctx, data.DeviceId)
-		if err != nil {
-			slog.Debug(err.Error())
+		// ⚡ Fast in-memory rule lookup (cached per deviceId)
+		rules, err := s.getCachedActiveRulesByDeviceId(ctx, data.DeviceId)
+		if err != nil || len(rules) == 0 {
+			if err != nil {
+				slog.Debug(err.Error())
+			}
 			continue
 		}
 

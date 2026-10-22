@@ -151,7 +151,7 @@ func InitializeDeviceGateway(ctx context.Context) (App, error) {
 	sessionService := service.NewSessionManagerService(gatewayRepo, cacheService)
 
 	handlers := router.RouterHandlers{
-		DeviceGateway: handler.NewDeviceGatewayHandler(gatewayService, sessionService, cacheService),
+		DeviceGateway: handler.NewDeviceGatewayHandler(gatewayService, sessionService, cacheService, notificationService),
 	}
 
 	mux := router.SetupDeviceGateway(handlers)

@@ -230,6 +230,7 @@ const menuTranslationMap = {
   'Log Report': 'logReport',
   'Notification User': 'notifUser',
   'Notification Device': 'notifDeviceRule',
+  'Notification Maintenance': 'notifMaintenance',
   'User': 'user',
   'Role': 'role',
   'Device': 'device',

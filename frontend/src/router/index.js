@@ -12,6 +12,7 @@ import CanvasDesignView from '@/views/canvasManagement/CanvasDesignView.vue';
 import CanvasAccessView from '@/views/canvasManagement/CanvasAccessView.vue';
 import NotifUserView from '@/views/notification/NotifUserView.vue';
 import NotifDeviceRuleView from '@/views/notification/NotifDeviceRuleView.vue';
+import NotifMaintenanceView from '@/views/notification/NotifMaintenanceView.vue';
 import LineRegisterView from '@/views/line/LineRegisterView.vue';
 import { useFetch } from '@/composables/useFetch';
 import { toast } from 'vue3-toastify';
@@ -111,6 +112,11 @@ const router = createRouter({
           path: 'devicerule',
           name: 'notifDevicerule',
           component: NotifDeviceRuleView,
+        },
+        {
+          path: 'maintenance',
+          name: 'notifMaintenance',
+          component: NotifMaintenanceView,
         }
       ]
     },

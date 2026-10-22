@@ -17,13 +17,19 @@ type DeviceGatewayHandler struct {
 	service        model.DeviceGatewayService
 	sessionService model.SessionManagerService
 	cacheService   model.DeviceCacheService
+	notifService   model.NotificationService
 }
 
-func NewDeviceGatewayHandler(gatewayService model.DeviceGatewayService, sessionService model.SessionManagerService, cacheService model.DeviceCacheService) *DeviceGatewayHandler {
+func NewDeviceGatewayHandler(gatewayService model.DeviceGatewayService, sessionService model.SessionManagerService, cacheService model.DeviceCacheService, notifService ...model.NotificationService) *DeviceGatewayHandler {
+	var ns model.NotificationService
+	if len(notifService) > 0 {
+		ns = notifService[0]
+	}
 	return &DeviceGatewayHandler{
 		service:        gatewayService,
 		sessionService: sessionService,
 		cacheService:   cacheService,
+		notifService:   ns,
 	}
 }
 
@@ -40,9 +46,6 @@ func (h *DeviceGatewayHandler) Command(w http.ResponseWriter, r *http.Request) {
 	hasDevice := req.DeviceId > 0
 	hasGroup := req.GroupId > 0
 
-	// ⚡ FIX: Changed len(req.Payload) != 0 to == 0
-	// It ensures you provide either a DeviceId OR a GroupId (not both),
-	// ensures the payload has items, and ensures a protocol exists.
 	if (hasDevice == hasGroup) || len(req.Payload) == 0 || req.Protocol == "" {
 		res.Message = "Missing required fields (Requires DeviceId XOR GroupId, valid Payload, and Protocol)"
 		respondJson(w, http.StatusBadRequest, &res)
@@ -112,7 +115,7 @@ func (h *DeviceGatewayHandler) HTTPTelemetry(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 
 	groupName := r.URL.Query().Get("device-group")
-	targetDevice := r.URL.Query().Get("device") // ⚡ NEW: Get the target device from the URL
+	targetDevice := r.URL.Query().Get("device")
 
 	validGroupDevices := make(map[int]bool)
 	isGroupMode := groupName != ""
@@ -141,7 +144,6 @@ func (h *DeviceGatewayHandler) HTTPTelemetry(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 
-		// ⚡ NEW: If not in group mode, enforce the ?device= parameter (if provided)
 		if !isGroupMode && targetDevice != "" && reqData.DeviceName != targetDevice {
 			slog.DebugContext(ctx, "Skipped device (does not match URL target)",
 				slog.String("payloadDevice", reqData.DeviceName),
@@ -189,7 +191,6 @@ func (h *DeviceGatewayHandler) HTTPTelemetry(w http.ResponseWriter, r *http.Requ
 	respondJson(w, http.StatusOK, &res)
 }
 
-// HTTPCommandPolling allows HTTP physical devices to fetch queued commands via GET
 func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http.Request) {
 	var allCommands []model.DeviceCommand
 
@@ -197,7 +198,6 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 	groupName := r.URL.Query().Get("device-group")
 
 	if groupName != "" {
-		// --- NEW: Validate Group Protocol ---
 		deviceIds, groupProtocol, err := h.cacheService.GetGroupInfoByName(ctx, groupName)
 		if err != nil || len(deviceIds) == 0 {
 			slog.WarnContext(ctx, "Group not found or contains no devices")
@@ -210,7 +210,6 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		// ------------------------------------
 
 		for _, id := range deviceIds {
 			h.sessionService.MarkDeviceActive(id)
@@ -257,7 +256,7 @@ func (h *DeviceGatewayHandler) HTTPCommandPolling(w http.ResponseWriter, r *http
 }
 
 func (h *DeviceGatewayHandler) DeviceStatus(w http.ResponseWriter, r *http.Request) {
-	var res Response // Using your standard response struct
+	var res Response
 
 	deviceIdStr := r.URL.Query().Get("deviceId")
 	deviceId, err := strconv.Atoi(deviceIdStr)
@@ -267,7 +266,6 @@ func (h *DeviceGatewayHandler) DeviceStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Ask the Session Manager!
 	isOnline := h.sessionService.IsDeviceOnline(deviceId)
 	if isOnline {
 		if err = h.service.UpdateDeviceLastSeen(r.Context(), deviceId); err != nil {
@@ -288,24 +286,35 @@ func (h *DeviceGatewayHandler) DeviceStatus(w http.ResponseWriter, r *http.Reque
 
 func (h *DeviceGatewayHandler) ClearCache(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
-	cacheType := r.URL.Query().Get("type") // expecting "device" or "group"
-
-	if name == "" {
-		http.Error(w, "Missing 'name' parameter", http.StatusBadRequest)
-		return
-	}
+	cacheType := r.URL.Query().Get("type") // "device", "group", or "rule"
 
 	switch cacheType {
+	case "rule":
+		idStr := r.URL.Query().Get("id")
+		deviceId, _ := strconv.Atoi(idStr)
+		if h.notifService != nil {
+			h.notifService.InvalidateDeviceRuleCache(deviceId)
+		}
+		slog.Info("Invalidated device rule cache", slog.Int("deviceId", deviceId))
 	case "device":
-		// ⚡ Use the injected Cache Service instead of the listener package
+		if name == "" {
+			http.Error(w, "Missing 'name' parameter", http.StatusBadRequest)
+			return
+		}
 		h.cacheService.InvalidateDevice(name)
+		if h.notifService != nil {
+			h.notifService.InvalidateDeviceRuleCache(0)
+		}
 		slog.Info("Invalidated device cache", slog.String("deviceName", name))
 	case "group":
-		// ⚡ Use the injected Cache Service
+		if name == "" {
+			http.Error(w, "Missing 'name' parameter", http.StatusBadRequest)
+			return
+		}
 		h.cacheService.InvalidateGroup(name)
 		slog.Info("Invalidated group cache", slog.String("groupName", name))
 	default:
-		http.Error(w, "Invalid 'type' parameter. Must be 'device' or 'group'", http.StatusBadRequest)
+		http.Error(w, "Invalid 'type' parameter. Must be 'device', 'group', or 'rule'", http.StatusBadRequest)
 		return
 	}
 

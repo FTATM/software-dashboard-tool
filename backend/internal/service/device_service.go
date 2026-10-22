@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/FTATM/software-dashboard-tool/internal/model"
-	"github.com/jackc/pgx/v5"
 )
 
 type deviceService struct {
@@ -326,29 +324,26 @@ func (s *deviceService) StartPublic(ctx context.Context) {
 			// ⚡ 4. Prove we reached the database phase
 			slog.Debug("🗄️ StartPublic querying database for clients...")
 
-			masterDataMap := make(map[int]model.ChartDeviceData)
+			deviceIdList := make([]int, 0, len(activeDeviceIds))
 			for deviceId := range activeDeviceIds {
-				chartDeviceData, err := s.deviceRepo.GetByIdChartDeviceData(ctx, deviceId)
-				if err != nil {
-					if errors.Is(err, pgx.ErrNoRows) {
-						slog.Debug("No Found to fetch chart data for device",
-							slog.Int("deviceId", deviceId),
-							slog.String("error", err.Error()))
-						continue
-					}
-					slog.Error("Failed to fetch chart data for device",
-						slog.Int("deviceId", deviceId),
-						slog.String("error", err.Error()))
-					continue
-				}
+				deviceIdList = append(deviceIdList, deviceId)
+			}
 
+			rawDataMap, err := s.deviceRepo.GetByIdsChartDeviceData(ctx, deviceIdList)
+			if err != nil {
+				slog.Error("Failed to batch fetch chart data for devices", slog.String("error", err.Error()))
+				continue
+			}
+
+			masterDataMap := make(map[int]model.ChartDeviceData, len(rawDataMap))
+			for deviceId, chartDeviceData := range rawDataMap {
 				// 1. Base scale
 				scaledVal := chartDeviceData.ValueData / float64(model.DeviceScale)
 
-				// 2. Remap EU using the ranges already retrieved by GetByIdChartDeviceData
+				// 2. Remap EU using the ranges already retrieved by GetByIdsChartDeviceData
 				euVal := model.Remap(scaledVal, chartDeviceData.RawMin, chartDeviceData.RawMax, chartDeviceData.EuMin, chartDeviceData.EuMax)
 
-				// 3. Round to 2 decimals inline
+				// 3. Round to 3 decimals inline
 				chartDeviceData.ValueData = math.Round(euVal*1000) / 1000
 
 				masterDataMap[deviceId] = chartDeviceData

@@ -88,3 +88,61 @@ func (c *scheduleEngineClient) UnsyncSchedule(ctx context.Context, scheduleID st
 
 	return nil
 }
+
+func (c *scheduleEngineClient) SyncMaintenance(ctx context.Context, maintenanceId int) error {
+	const fname = "SyncMaintenance"
+	url := fmt.Sprintf("%s/scheduleengine/internal/maintenance/sync", c.baseURL)
+
+	body := model.SyncMaintenanceReq{
+		MaintenanceId: maintenanceId,
+	}
+
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", c.prefixError, fname, err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", c.prefixError, fname, err)
+	}
+
+	httpReq.Header.Set("X-Internal-Secret", c.internalSecret)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s] scheduler service unreachable: %w", c.prefixError, fname, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("[%s]>[%s] scheduler service returned non-200 status: %d", c.prefixError, fname, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *scheduleEngineClient) UnsyncMaintenance(ctx context.Context, maintenanceId int) error {
+	const fname = "UnsyncMaintenance"
+	url := fmt.Sprintf("%s/scheduleengine/internal/maintenance/unsync/%d", c.baseURL, maintenanceId)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", c.prefixError, fname, err)
+	}
+
+	httpReq.Header.Set("X-Internal-Secret", c.internalSecret)
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s] scheduler service unreachable: %w", c.prefixError, fname, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("[%s]>[%s] scheduler service returned non-200 status: %d", c.prefixError, fname, resp.StatusCode)
+	}
+
+	return nil
+}

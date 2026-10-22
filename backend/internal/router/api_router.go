@@ -93,6 +93,10 @@ func SetupApi(handlers RouterHandlers) *http.ServeMux {
 	notification.HandleFunc("POST /devicerule/create", handlers.Notification.CreateDeviceRule)
 	notification.HandleFunc("PUT /devicerule/update", handlers.Notification.UpdateDeviceRule)
 	notification.HandleFunc("DELETE /devicerule/delete/{id}", handlers.Notification.DeleteDeviceRule)
+	notification.HandleFunc("GET /maintenance/getalldetail", handlers.Notification.GetMaintenanceAllDetail)
+	notification.HandleFunc("POST /maintenance/create", handlers.Notification.CreateMaintenance)
+	notification.HandleFunc("PUT /maintenance/update", handlers.Notification.UpdateMaintenance)
+	notification.HandleFunc("DELETE /maintenance/delete/{id}", handlers.Notification.DeleteMaintenance)
 
 	s3File := http.NewServeMux()
 	mux.Handle("/file/", http.StripPrefix("/file", s3File))

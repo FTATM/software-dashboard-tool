@@ -51,6 +51,7 @@ type DeviceGatewayClient interface {
 	ExecuteCommand(ctx context.Context, req GatewayCommand) error
 	InvalidateDeviceCache(ctx context.Context, oldDeviceName string) error
 	InvalidateGroupCache(ctx context.Context, oldGroupName string) error
+	InvalidateRuleCache(ctx context.Context, deviceId int) error
 }
 
 func BuildGatewayCommands(devices []CommandDeviceInfo, actionPayload TaskActionPayload, isGroupTarget bool) []GatewayCommand {

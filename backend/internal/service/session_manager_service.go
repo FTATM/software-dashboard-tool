@@ -194,13 +194,13 @@ func (s *sessionManagerService) routeMQTT(ctx context.Context, req *model.Gatewa
 
 	var topic string
 	if req.GroupId > 0 {
-		groupName, err := s.repo.GetDeviceGroupNameById(ctx, req.GroupId)
+		groupName, err := s.deviceCacheSvc.GetGroupNameById(ctx, req.GroupId)
 		if err != nil || groupName == "" {
 			return fmt.Errorf("failed to fetch group name for id %d: %w", req.GroupId, err)
 		}
 		topic = fmt.Sprintf("device-group/%s/cmd", groupName)
 	} else if req.DeviceId > 0 {
-		deviceName, err := s.repo.GetDeviceNameById(ctx, req.DeviceId)
+		deviceName, err := s.deviceCacheSvc.GetDeviceNameById(ctx, req.DeviceId)
 		if err != nil || deviceName == "" {
 			return fmt.Errorf("failed to fetch device name for id %d: %w", req.DeviceId, err)
 		}
@@ -229,7 +229,7 @@ func (s *sessionManagerService) routeTCP(ctx context.Context, req *model.Gateway
 
 	// ⚡ 2. ค้นหาเป้าหมาย (รองรับทั้ง Group และ Single)
 	if req.GroupId > 0 {
-		groupName, err := s.repo.GetDeviceGroupNameById(ctx, req.GroupId)
+		groupName, err := s.deviceCacheSvc.GetGroupNameById(ctx, req.GroupId)
 		if err == nil && groupName != "" {
 			// ใช้ฟังก์ชันที่คุณสร้างไว้ในรอบที่แล้ว
 			deviceIds, _, _ := s.deviceCacheSvc.GetGroupInfoByName(ctx, groupName)
@@ -295,7 +295,7 @@ func (s *sessionManagerService) routeUDP(ctx context.Context, req *model.Gateway
 
 	// 2. ค้นหาเป้าหมาย (รองรับทั้ง Group และ Single เหมือน TCP)
 	if req.GroupId > 0 {
-		groupName, err := s.repo.GetDeviceGroupNameById(ctx, req.GroupId)
+		groupName, err := s.deviceCacheSvc.GetGroupNameById(ctx, req.GroupId)
 		if err == nil && groupName != "" {
 			deviceIds, _, _ := s.deviceCacheSvc.GetGroupInfoByName(ctx, groupName)
 			devicesToNotify = append(devicesToNotify, deviceIds...)

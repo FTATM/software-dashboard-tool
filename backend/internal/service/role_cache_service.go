@@ -7,7 +7,8 @@ import (
 )
 
 type roleCache struct {
-	store sync.Map
+	store     sync.Map // map[roleId int]map[string][]string
+	userRoles sync.Map // map[userId int]roleId int
 }
 
 // NewRoleCache creates a new instance of the in-memory permission cache
@@ -28,4 +29,26 @@ func (c *roleCache) Set(roleId int, permissions map[string][]string) {
 
 func (c *roleCache) Delete(roleId int) {
 	c.store.Delete(roleId)
+}
+
+func (c *roleCache) GetUserRole(userId int) (int, bool) {
+	if val, ok := c.userRoles.Load(userId); ok {
+		return val.(int), true
+	}
+	return 0, false
+}
+
+func (c *roleCache) SetUserRole(userId int, roleId int) {
+	c.userRoles.Store(userId, roleId)
+}
+
+func (c *roleCache) DeleteUserRole(userId int) {
+	c.userRoles.Delete(userId)
+}
+
+func (c *roleCache) ClearUserRoles() {
+	c.userRoles.Range(func(key, _ any) bool {
+		c.userRoles.Delete(key)
+		return true
+	})
 }

@@ -96,6 +96,10 @@ func (s *userService) CreateUser(ctx context.Context, createUser *model.CreateUs
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
+	if s.roleCache != nil {
+		s.roleCache.DeleteUserRole(user.UserId)
+	}
+
 	return &user, nil
 }
 
@@ -178,30 +182,48 @@ func (s *userService) UpdateUser(ctx context.Context, updateUser *model.UpdateUs
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
 
+	if s.roleCache != nil {
+		s.roleCache.DeleteUserRole(user.UserId)
+	}
+
 	return &user, nil
 }
 
 func (s *userService) GetPermissionMapByUserId(ctx context.Context, userId int) (map[string][]string, error) {
 	const fname = "GetPermissionMapByUserId"
 
-	// 1. Fetch the user to check active status AND get their RoleId
-	user, err := s.userRepo.GetUserForPermissionById(ctx, userId)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		} else {
+	var roleId int
+	var hasRole bool
+	if s.roleCache != nil {
+		roleId, hasRole = s.roleCache.GetUserRole(userId)
+	}
+
+	if !hasRole {
+		user, err := s.userRepo.GetUserForPermissionById(ctx, userId)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				if s.roleCache != nil {
+					s.roleCache.DeleteUserRole(userId)
+				}
+				return nil, nil
+			}
 			return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+		}
+		roleId = user.RoleId
+		if s.roleCache != nil {
+			s.roleCache.SetUserRole(userId, roleId)
 		}
 	}
 
-	// 2. ⚡ FAST PATH: Check the cache using roleId instead of userId
-	if cached, ok := s.roleCache.Get(user.RoleId); ok {
-		return cached, nil
+	// 2. ⚡ FAST PATH: Check the cache using roleId
+	if s.roleCache != nil {
+		if cached, ok := s.roleCache.Get(roleId); ok {
+			return cached, nil
+		}
 	}
 
 	// 3. SLOW PATH: Fetch permissions for this specific role from the database
-	// We switch to your existing GetPermissionDescByRoleId method here
-	rolePermissionDescs, err := s.roleRepo.GetPermissionDescByRoleId(ctx, user.RoleId)
+	rolePermissionDescs, err := s.roleRepo.GetPermissionDescByRoleId(ctx, roleId)
 	if err != nil {
 		return nil, fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
 	}
@@ -212,7 +234,9 @@ func (s *userService) GetPermissionMapByUserId(ctx context.Context, userId int) 
 	}
 
 	// 4. ⚡ SAVE TO CACHE: Store the result mapped to the roleId
-	s.roleCache.Set(user.RoleId, permissionMap)
+	if s.roleCache != nil {
+		s.roleCache.Set(roleId, permissionMap)
+	}
 
 	return permissionMap, nil
 }
@@ -379,6 +403,10 @@ func (s *userService) DeleteUser(ctx context.Context, deleteUserId, authUserId i
 
 	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("[%s]>[%s]: %w", s.prefixError, fname, err)
+	}
+
+	if s.roleCache != nil {
+		s.roleCache.DeleteUserRole(deleteUserId)
 	}
 
 	return nil

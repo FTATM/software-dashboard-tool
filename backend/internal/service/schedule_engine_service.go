@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,31 +19,48 @@ import (
 )
 
 type scheduleEngineService struct {
-	scheduleEngineRepo model.ScheduleEngineRepository
-	prefixError        string
-	engine             gocron.Scheduler
-	deviceRepo         model.DeviceRepository
-	gatewayClient      model.DeviceGatewayClient
-	jobRegistry        sync.Map
-	widgetRepo         model.WidgetRepository
-	s3Client           model.S3Client
-	auditLogRepo       model.AuditLogRepository
+	scheduleEngineRepo     model.ScheduleEngineRepository
+	prefixError            string
+	engine                 gocron.Scheduler
+	deviceRepo             model.DeviceRepository
+	gatewayClient          model.DeviceGatewayClient
+	jobRegistry            sync.Map
+	maintenanceCache       sync.Map
+	widgetRepo             model.WidgetRepository
+	s3Client               model.S3Client
+	auditLogRepo           model.AuditLogRepository
+	notifRepo              model.NotificationRepository
+	notifClient            model.NotificationClient
+	maintenanceNotifRepeat int
 }
 
-func NewSchedulerEngineService(ser model.ScheduleEngineRepository, dr model.DeviceRepository, gc model.DeviceGatewayClient, widgetRepo model.WidgetRepository, s3Client model.S3Client, auditLogRepo model.AuditLogRepository) (model.ScheduleEngineService, error) {
+func NewSchedulerEngineService(
+	ser model.ScheduleEngineRepository,
+	dr model.DeviceRepository,
+	gc model.DeviceGatewayClient,
+	widgetRepo model.WidgetRepository,
+	s3Client model.S3Client,
+	auditLogRepo model.AuditLogRepository,
+	notifRepo model.NotificationRepository,
+	notifClient model.NotificationClient,
+	maintenanceNotifRepeat int,
+) (model.ScheduleEngineService, error) {
 	engine, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, err
 	}
 	return &scheduleEngineService{
-		scheduleEngineRepo: ser,
-		deviceRepo:         dr,
-		gatewayClient:      gc,
-		engine:             engine,
-		prefixError:        "scheduleEngineService",
-		widgetRepo:         widgetRepo,
-		s3Client:           s3Client,
-		auditLogRepo:       auditLogRepo,
+		scheduleEngineRepo:     ser,
+		deviceRepo:             dr,
+		gatewayClient:          gc,
+		engine:                 engine,
+		prefixError:            "scheduleEngineService",
+		widgetRepo:             widgetRepo,
+		s3Client:               s3Client,
+		auditLogRepo:           auditLogRepo,
+		notifRepo:              notifRepo,
+		notifClient:            notifClient,
+		maintenanceNotifRepeat: maintenanceNotifRepeat,
 	}, nil
 }
 
@@ -87,6 +106,16 @@ func (s *scheduleEngineService) Start(ctx context.Context) error {
 	if err != nil {
 		slog.ErrorContext(ctx, "Failed to register S3 GC task", slog.String("error", err.Error()))
 	}
+
+	// Register hourly in-memory Maintenance Counter & Alert Notification Job (runs at the top of each hour)
+	_, err = s.engine.NewJob(
+		gocron.CronJob("0 * * * *", false),
+		gocron.NewTask(s.ExecuteMaintenanceCheck, context.Background()),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to register hourly maintenance check task", slog.String("error", err.Error()))
+	}
+
 	// Load active jobs from Repo on startup
 	jobs, err := s.scheduleEngineRepo.GetActiveSchedules(ctx)
 	if err != nil {
@@ -105,8 +134,24 @@ func (s *scheduleEngineService) Start(ctx context.Context) error {
 
 	slog.InfoContext(ctx, fmt.Sprintf("[STARTUP] Successfully loaded %d out of %d active schedules", successCount, len(jobs)))
 
+	// Load active maintenance notifications into local memory cache on startup
+	if s.notifRepo != nil {
+		maintItems, err := s.notifRepo.GetActiveMaintenanceDetails(ctx)
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to load active maintenance items into cache on startup", slog.String("error", err.Error()))
+		} else {
+			for _, item := range maintItems {
+				s.maintenanceCache.Store(item.MaintenanceId, item)
+			}
+			slog.InfoContext(ctx, fmt.Sprintf("[STARTUP] Successfully cached %d active maintenance schedules in memory", len(maintItems)))
+		}
+	}
+
 	// Start the gocron engine
 	s.engine.Start()
+
+	// Run an initial in-memory maintenance check on startup
+	go s.ExecuteMaintenanceCheck(context.Background())
 
 	return nil
 }
@@ -151,6 +196,59 @@ func (s *scheduleEngineService) CancelJob(schedId string) bool {
 		slog.Info("Cancelled job in memory", slog.String("scheduleId", schedId))
 	}
 	return ok
+}
+
+// SyncMaintenance removes the old cached entry and re-caches the latest record from Postgres
+func (s *scheduleEngineService) SyncMaintenance(ctx context.Context, maintenanceId int) error {
+	if s.notifRepo == nil {
+		return nil
+	}
+
+	// If maintenanceId <= 0, reload the entire active cache
+	if maintenanceId <= 0 {
+		items, err := s.notifRepo.GetActiveMaintenanceDetails(ctx)
+		if err != nil {
+			return err
+		}
+		s.maintenanceCache.Range(func(key, _ any) bool {
+			s.maintenanceCache.Delete(key)
+			return true
+		})
+		for _, item := range items {
+			s.maintenanceCache.Store(item.MaintenanceId, item)
+		}
+		go s.ExecuteMaintenanceCheck(context.Background())
+		return nil
+	}
+
+	// Remove old cached version first
+	s.maintenanceCache.Delete(maintenanceId)
+
+	// Query latest version from DB
+	item, err := s.notifRepo.GetMaintenanceDetailById(ctx, maintenanceId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			slog.InfoContext(ctx, "Maintenance item inactive or deleted; removed from memory cache", slog.Int("maintenanceId", maintenanceId))
+			return nil
+		}
+		return err
+	}
+
+	// Re-cache updated item and evaluate in memory
+	s.maintenanceCache.Store(item.MaintenanceId, *item)
+	slog.InfoContext(ctx, "Re-cached maintenance schedule in memory", slog.Int("maintenanceId", maintenanceId))
+
+	go s.evaluateCachedMaintenanceItem(context.Background(), *item, time.Now())
+	return nil
+}
+
+// UnsyncMaintenance removes a deleted maintenance schedule from memory cache
+func (s *scheduleEngineService) UnsyncMaintenance(maintenanceId int) bool {
+	_, existed := s.maintenanceCache.LoadAndDelete(maintenanceId)
+	if existed {
+		slog.Info("Removed maintenance schedule from memory cache", slog.Int("maintenanceId", maintenanceId))
+	}
+	return existed
 }
 
 // The actual task that fires
@@ -304,6 +402,233 @@ func (s *scheduleEngineService) executeDeviceTask(ctx context.Context, jobID uui
 	for _, cmd := range finalCommands {
 		if err := s.gatewayClient.ExecuteCommand(ctx, cmd); err != nil {
 			slog.ErrorContext(ctx, "Failed to execute scheduled command via Gateway", slog.String("error", err.Error()))
+		}
+	}
+}
+
+func sameCalendarDay(a, b time.Time) bool {
+	ay, am, ad := a.In(time.Local).Date()
+	by, bm, bd := b.In(time.Local).Date()
+	return ay == by && am == bm && ad == bd
+}
+
+func calendarDaysBetween(start, current time.Time) int {
+	loc := time.Local
+	s := start.In(loc)
+	c := current.In(loc)
+	sFloor := time.Date(s.Year(), s.Month(), s.Day(), 0, 0, 0, 0, loc)
+	cFloor := time.Date(c.Year(), c.Month(), c.Day(), 0, 0, 0, 0, loc)
+	if cFloor.Before(sFloor) {
+		return 0
+	}
+	return int(cFloor.Sub(sFloor).Hours() / 24)
+}
+
+// ExecuteMaintenanceCheck evaluates all cached maintenance records in local memory without querying the DB
+// unless a daily counter increment or due alert actually triggers.
+func (s *scheduleEngineService) ExecuteMaintenanceCheck(ctx context.Context) {
+	if s.notifRepo == nil {
+		return
+	}
+
+	now := time.Now()
+	s.maintenanceCache.Range(func(key, value any) bool {
+		item, ok := value.(model.MaintenanceNotificationDetail)
+		if !ok || !item.Active {
+			return true
+		}
+		s.evaluateCachedMaintenanceItem(ctx, item, now)
+		return true
+	})
+}
+
+func (s *scheduleEngineService) evaluateCachedMaintenanceItem(ctx context.Context, item model.MaintenanceNotificationDetail, now time.Time) {
+	if !item.Active {
+		return
+	}
+
+	cacheUpdated := false
+
+	// 1. Local in-memory check for daily day_count increment (only writes to DB once per day when date changes)
+	expectedDays := calendarDaysBetween(item.StartDate, now)
+	needsDayUpdate := !now.Before(item.StartDate) && (item.LastCountedAt == nil || !sameCalendarDay(*item.LastCountedAt, now) || item.DayCount < expectedDays)
+	if needsDayUpdate {
+		newDayCount := item.DayCount
+		if item.LastCountedAt != nil && !sameCalendarDay(*item.LastCountedAt, now) {
+			newDayCount = item.DayCount + 1
+		}
+		if expectedDays > newDayCount {
+			newDayCount = expectedDays
+		}
+		if err := s.notifRepo.UpdateMaintenanceDayCount(ctx, item.MaintenanceId, newDayCount); err != nil {
+			slog.ErrorContext(ctx, "Failed to update maintenance day count in DB",
+				slog.Int("maintenanceId", item.MaintenanceId),
+				slog.String("error", err.Error()),
+			)
+		} else {
+			nowCopy := now
+			item.DayCount = newDayCount
+			item.LastCountedAt = &nowCopy
+			cacheUpdated = true
+		}
+	}
+
+	// 2. Local in-memory check for Maintenance Due or Daily Repeat Alert
+	isInitialDue := item.NotifSentCount == 0 && !now.Before(item.MaintenanceDate)
+	isRepeatDue := item.NotifSentCount > 0 &&
+		item.NotifSentCount <= s.maintenanceNotifRepeat &&
+		!now.Before(item.MaintenanceDate.Add(time.Duration(item.NotifSentCount)*24*time.Hour)) &&
+		(item.LastNotifiedAt == nil || !now.Before(item.LastNotifiedAt.Add(24*time.Hour)))
+
+	if isInitialDue || isRepeatDue {
+		sentCount, marked, err := s.notifRepo.MarkMaintenanceNotified(ctx, item.MaintenanceId, s.maintenanceNotifRepeat)
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to mark maintenance item as notified",
+				slog.Int("maintenanceId", item.MaintenanceId),
+				slog.String("error", err.Error()),
+			)
+		} else if marked {
+			nowCopy := now
+			item.NotifSentCount = sentCount
+			item.Notified = true
+			item.LastNotifiedAt = &nowCopy
+			cacheUpdated = true
+
+			statusLabel := "Maintenance"
+			if sentCount > 1 || now.Sub(item.MaintenanceDate) >= 24*time.Hour {
+				statusLabel = "Late"
+			}
+
+			// Record system audit log for maintenance alert dispatch (ChangedBy: 0 = System)
+			newData, _ := model.StructToDynamicJSON(map[string]any{
+				"maintenanceId":   item.MaintenanceId,
+				"deviceId":        item.DeviceId,
+				"deviceGroupId":   item.DeviceGroupId,
+				"dayCount":        item.DayCount,
+				"operatingHours":  item.DayCount * 24,
+				"maintenanceDate": item.MaintenanceDate,
+				"status":          statusLabel,
+				"notifSentCount":  sentCount,
+				"maxRepeat":       s.maintenanceNotifRepeat,
+			})
+			audit := model.AuditLog{
+				EntityType: "maintenance_notification",
+				EntityId:   strconv.Itoa(item.MaintenanceId),
+				MenuType:   "Notification Maintenance",
+				Action:     model.UpdateAction,
+				ChangedBy:  0, // System (userId 0)
+				OldData:    nil,
+				NewData:    newData,
+			}
+			if err := s.auditLogRepo.Create(ctx, []model.AuditLog{audit}); err != nil {
+				slog.ErrorContext(ctx, "Failed to insert maintenance alert audit log", slog.String("error", err.Error()))
+			}
+
+			users, err := s.notifRepo.GetActiveUsersNotif(ctx)
+			if err != nil {
+				slog.ErrorContext(ctx, "Failed to fetch active notification users for maintenance alert", slog.String("error", err.Error()))
+			} else if len(users) > 0 && s.notifClient != nil {
+				go s.dispatchMaintenanceNotif(context.Background(), users, item, statusLabel)
+			}
+		}
+	}
+
+	// Remove old and re-cache updated state in local memory
+	if cacheUpdated {
+		s.maintenanceCache.Delete(item.MaintenanceId)
+		s.maintenanceCache.Store(item.MaintenanceId, item)
+	}
+}
+
+func (s *scheduleEngineService) dispatchMaintenanceNotif(ctx context.Context, users []model.UserNotificationSend, item model.MaintenanceNotificationDetail, statusLabel string) {
+	var smsUsers []model.UserNotificationSend
+	var emailUsers []model.UserNotificationSend
+	var lineUsers []model.UserNotificationSend
+
+	targetTypeTH := "อุปกรณ์"
+	targetTypeEN := "Device"
+	targetName := item.DeviceName
+	if item.DeviceGroupId != nil && *item.DeviceGroupId > 0 {
+		targetTypeTH = "กลุ่มอุปกรณ์"
+		targetTypeEN = "Device Group"
+		targetName = item.GroupName
+	}
+
+	operatingHours := item.DayCount * 24
+	reasonText := strings.TrimSpace(item.Reason)
+	if reasonText == "" {
+		reasonText = "ถึงกำหนดตรวจซ่อมบำรุงตามรอบเวลา / Scheduled Maintenance Due"
+	}
+
+	startStr := item.StartDate.In(time.Local).Format("02/01/2006 15:00")
+	maintStr := item.MaintenanceDate.In(time.Local).Format("02/01/2006 15:00")
+
+	statusTH := "ถึงกำหนดซ่อมบำรุง (Maintenance)"
+	if statusLabel == "Late" {
+		repeatIdx := max(1, item.NotifSentCount-1)
+		statusTH = fmt.Sprintf("เลยกำหนดซ่อมบำรุง (Late - แจ้งเตือนซ้ำครั้งที่ %d/%d)", repeatIdx, s.maintenanceNotifRepeat)
+	}
+
+	shortMsg := fmt.Sprintf(
+		"[%s] แจ้งเตือนซ่อมบำรุง: %s (%d วัน / %d ชม.) กำหนด %s - %s",
+		statusLabel, targetName, item.DayCount, operatingHours, maintStr, reasonText,
+	)
+
+	emailTemplate := "🔧 แจ้งเตือนชั่วโมงการทำงานและกำหนดตรวจซ่อมบำรุง (Maintenance Alert)\n" +
+		"สถานะ (Status): %s\n" +
+		"%s: %s\n" +
+		"ระยะเวลาทำงานสะสม: %d วัน (%d ชั่วโมง)\n" +
+		"วันที่เริ่มนับ: %s\n" +
+		"กำหนดตรวจซ่อมบำรุง: %s\n" +
+		"รายละเอียด: %s\n\n" +
+		"----------------------------------------\n\n" +
+		"🔧 Operating Hours & Maintenance Due Alert\n" +
+		"Status: %s\n" +
+		"%s: %s\n" +
+		"Accumulated Operating Time: %d Days (%d Hours)\n" +
+		"Start Date: %s\n" +
+		"Maintenance Due Date: %s\n" +
+		"Note: %s"
+
+	emailMsg := fmt.Sprintf(
+		emailTemplate,
+		statusTH, targetTypeTH, targetName, item.DayCount, operatingHours, startStr, maintStr, reasonText,
+		statusLabel, targetTypeEN, targetName, item.DayCount, operatingHours, startStr, maintStr, reasonText,
+	)
+
+	for _, u := range users {
+		if u.SmsActive {
+			uCopy := u
+			uCopy.Msg = shortMsg
+			smsUsers = append(smsUsers, uCopy)
+		}
+		if u.EmailActive {
+			uCopy := u
+			uCopy.Msg = emailMsg
+			emailUsers = append(emailUsers, uCopy)
+		}
+		if u.LineActive {
+			uCopy := u
+			uCopy.Msg = shortMsg
+			lineUsers = append(lineUsers, uCopy)
+		}
+	}
+
+	if len(smsUsers) > 0 {
+		if err := s.notifClient.SendSms(ctx, smsUsers); err != nil {
+			slog.Error("Failed to dispatch Maintenance SMS batch", slog.String("error", err.Error()))
+		}
+	}
+
+	if len(emailUsers) > 0 {
+		if err := s.notifClient.SendEmail(ctx, emailUsers); err != nil {
+			slog.Error("Failed to dispatch Maintenance Email batch", slog.String("error", err.Error()))
+		}
+	}
+
+	if len(lineUsers) > 0 {
+		if err := s.notifClient.SendLine(ctx, lineUsers); err != nil {
+			slog.Error("Failed to dispatch Maintenance Line batch", slog.String("error", err.Error()))
 		}
 	}
 }

@@ -63,8 +63,13 @@ func (s *deviceGatewayService) Start(parentCtx context.Context) error {
 				} else {
 					slog.InfoContext(s.ctx, "Flushed batch to database", slog.Int("count", len(batch)))
 				}
-				s.notifService.AddDeviceDataAlert(batch)
-				// Re-slice to zero to reuse memory
+
+				// Copy batch into a dedicated slice before resetting batch[:0] to avoid data race in async alert worker
+				alertBatch := make([]model.DeviceData, len(batch))
+				copy(alertBatch, batch)
+				s.notifService.AddDeviceDataAlert(alertBatch)
+
+				// Re-slice to zero to reuse memory safely
 				batch = batch[:0]
 			}
 		}

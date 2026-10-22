@@ -33,7 +33,8 @@
     "user": "User",
     "role": "Role",
     "device": "Device",
-    "deviceGroup": "Device Group"
+    "deviceGroup": "Device Group",
+    "notifMaintenance": "Maintenance Alert"
   },
   "settings": {
     "language": "Language",
@@ -533,7 +534,7 @@
     "height": "Height",
     "saveSettings": "Save Settings",
     "newWidget": "New {type}",
-    "noCanvas":"No Canvas Selected",
+    "noCanvas": "No Canvas Selected",
     "widgets": {
       "barChart": "Bar Chart",
       "rowChart": "Row Chart",
@@ -959,6 +960,50 @@
       "uploadFailed": "Image upload failed.",
       "fileTooLarge": "Image upload more than 10 MB.",
       "fileNotAllowed": "Only image files (PNG, JPG, GIF, WEBP) are allowed."
+    }
+  },
+  "notifMaintenance": {
+    "title": "Maintenance & Operating Hours Alert",
+    "subtitle": "Track daily device or group operating hours and receive alerts when maintenance is due.",
+    "addMaintenance": "Add Maintenance",
+    "editMaintenance": "Edit Maintenance Schedule",
+    "createMaintenance": "Create Maintenance Schedule",
+    "startDate": "Start Date",
+    "selectStartDate": "Select start date & time",
+    "maintenanceDate": "Maintenance Date",
+    "selectMaintenanceDate": "Select due date & time",
+    "dateSelectionMode": "Maintenance Schedule Mode",
+    "modeByDate": "Select by Date",
+    "modeByDays": "Select by Days",
+    "intervalDays": "Duration (Days)",
+    "intervalDaysPlaceholder": "e.g., 180",
+    "alertTime": "Alert Time",
+    "selectAlertTime": "Select time",
+    "calculatedDueDate": "Calculated Maintenance Date",
+    "resetCycle": "Reset Cycle (+{days} Days)",
+    "resetCycleDesc": "Reset Start Date to now and set next Maintenance Date to +{days} days.",
+    "cycleResetToast": "Start date reset to now and next maintenance set to +{days} days.",
+    "operatingCount": "Operating Time",
+    "daysCount": "{days} Days",
+    "hoursCount": "{hours} Hrs",
+    "targetDaysLabel": "Cycle: {total} Days",
+    "maintenanceNote": "Maintenance Note (Reason)",
+    "maintenanceNotePlaceholder": "e.g., Inspect bearings and replace filter",
+    "maintenanceNoteDesc": "This note will be included in the notification sent to users when maintenance is due.",
+    "noReason": "Scheduled maintenance check",
+    "maintenanceStatus": "Maintenance Tracking Status",
+    "maintenanceStatusDesc": "If disabled, daily counting and maintenance alerts will be paused.",
+    "statusCounting": "Counting",
+    "statusNearMaintenance": "Near Maintenance",
+    "statusMaintenance": "Maintenance",
+    "statusLate": "Late",
+    "deleteWarning": "Are you sure you want to delete the maintenance schedule for \"{name}\"? This action cannot be undone.",
+    "validation": {
+      "startDateRequired": "Start date is required",
+      "maintenanceDateRequired": "Maintenance date is required",
+      "maintenanceAfterStart": "Maintenance date must be on or after the start date",
+      "intervalDaysRequired": "Number of days is required",
+      "intervalDaysMin": "Must be at least 1 day"
     }
   }
 }
