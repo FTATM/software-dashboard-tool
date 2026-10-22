@@ -1,68 +1,108 @@
 <template>
-  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4">
+  <div v-if="hasPermission(mainMenuName, 'Display')" class="w-full h-full overflow-y-auto p-4 sm:p-6 space-y-5">
 
-    <!-- Page Header Card -->
-    <div
-      class="bg-base-100 shadow-sm rounded-box border border-base-200 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-warning/15 text-warning rounded-xl flex items-center justify-center">
-          <Icon icon="lucide:wrench" class="w-7 h-7" />
+    <!-- Anchored Page Header Card with Background -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="p-3 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0">
+          <Icon icon="lucide:wrench" class="w-6 h-6" />
         </div>
+
         <div>
-          <h2 class="m-0 text-2xl font-extrabold text-base-content tracking-tight">{{ $t('notifMaintenance.title') }}</h2>
-          <p class="mt-1 mb-0 text-base-content/60 text-sm font-medium">{{ $t('notifMaintenance.subtitle') }}</p>
+          <!-- Breadcrumbs -->
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-0.5">
+            <span class="text-primary">{{ $t('notifMaintenance.title') }}</span>
+          </div>
+
+          <!-- Title & Subtitle -->
+          <div class="flex items-center gap-2.5">
+            <h1 class="m-0 text-xl sm:text-2xl font-black text-base-content tracking-tight">
+              {{ $t('notifMaintenance.title') }}
+            </h1>
+          </div>
+          <p class="mt-0.5 mb-0 text-base-content/60 text-xs font-medium">
+            {{ $t('notifMaintenance.subtitle') }}
+          </p>
         </div>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button 
+          @click="loadData" 
+          class="btn btn-sm btn-ghost border border-base-300 bg-base-100 hover:bg-base-200 rounded-xl gap-1.5 text-xs font-semibold shadow-xs transition-all"
+          :title="$t('common.refresh')">
+          <Icon icon="lucide:refresh-cw" class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
+          <span>{{ $t('common.refresh') }}</span>
+        </button>
       </div>
     </div>
 
-    <!-- Data Table -->
-    <div class="flex-1 flex flex-col min-h-0">
-      <TableData :data="maintenanceTableData" :columns="tableColumns" :is-loading="isLoading"
+    <!-- Reusable KPI Summary Status Cards -->
+    <StatCardGroup :items="statCardsData" />
+
+    <!-- Main Table Card -->
+    <div class="bg-base-100 border border-base-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+      <TableData 
+        :data="maintenanceTableData" 
+        :columns="tableColumns" 
+        :is-loading="isLoading"
         :initial-sorting="[{ id: 'maintenanceId', desc: false }]">
+        
+        <!-- Toolbar Actions -->
         <template #toolbar-actions>
-          <button class="btn btn-primary shadow-sm hover:shadow-md transition-all" @click="openCreateModal">
-            <Icon icon="lucide:plus" class="w-5 h-5" />
+          <button 
+            class="btn btn-sm btn-primary rounded-xl font-semibold shadow-xs hover:shadow-md transition-all gap-1 text-white" 
+            @click="openCreateModal">
+            <Icon icon="lucide:plus" class="w-4 h-4" />
             {{ $t('notifMaintenance.addMaintenance') }}
           </button>
         </template>
 
+        <!-- Maintenance ID with Tooltip -->
         <template #cell-maintenanceId="{ value }">
-          <span class="font-medium text-base-content/50">{{ value }}</span>
+          <div class="tooltip tooltip-right" :class="copiedId === value ? 'tooltip-success' : ''"
+            :data-tip="copiedId === value ? 'Copied!' : 'Copy ID'">
+            <div @click="copyToClipboard(value)"
+              class="max-w-[100px] md:max-w-[130px] truncate font-mono text-xs font-bold text-base-content/50 cursor-pointer hover:text-primary transition-colors">
+              {{ value }}
+            </div>
+          </div>
         </template>
 
         <!-- Target (Device or Group) -->
         <template #cell-target="{ row }">
           <div v-if="row.deviceGroupId" class="flex items-center gap-2">
-            <div class="p-1.5 bg-secondary/10 rounded-md">
-              <Icon icon="lucide:layers" class="w-4 h-4 text-secondary" />
+            <div class="w-7 h-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+              <Icon icon="lucide:layers" class="w-3.5 h-3.5" />
             </div>
             <span :class="[
-              'font-semibold',
+              'font-semibold text-sm tracking-tight',
               isUnknownGroup(row.deviceGroupId) ? 'text-base-content/50 italic' : 'text-base-content'
             ]">
               {{ getGroupName(row.deviceGroupId) }}
             </span>
           </div>
           <div v-else-if="row.deviceId" class="flex items-center gap-2">
-            <div class="p-1.5 bg-primary/10 rounded-md">
-              <Icon icon="lucide:cpu" class="w-4 h-4 text-primary" />
+            <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Icon icon="lucide:cpu" class="w-3.5 h-3.5" />
             </div>
             <span :class="[
-              'font-bold',
-              isUnknownDevice(row.deviceId) ? 'text-base-content/50 italic font-medium' : 'text-primary'
+              'font-semibold text-sm tracking-tight',
+              isUnknownDevice(row.deviceId) ? 'text-base-content/50 italic' : 'text-base-content'
             ]">
               {{ getDeviceName(row.deviceId) }}
             </span>
           </div>
-          <div v-else class="badge badge-error badge-sm text-white font-bold">
+          <div v-else class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-error/10 text-error border border-error/20">
             {{ $t('scheduler.noTarget') }}
           </div>
         </template>
 
         <!-- Start Date (Hour precision: dd/MM/yyyy, HH:00) -->
         <template #cell-startDate="{ value }">
-          <div class="flex items-center gap-1.5 text-sm font-mono">
-            <Icon icon="lucide:calendar" class="w-4 h-4 text-base-content/50" />
+          <div class="flex items-center gap-1.5 text-xs font-mono text-base-content/70">
+            <Icon icon="lucide:calendar" class="w-3.5 h-3.5 opacity-60" />
             <span>{{ formatDateHour(value) }}</span>
           </div>
         </template>
@@ -70,23 +110,23 @@
         <!-- Maintenance Due Date (Hour precision: dd/MM/yyyy, HH:00) -->
         <template #cell-maintenanceDate="{ value, row }">
           <div class="flex flex-col gap-0.5">
-            <div class="flex items-center gap-1.5 text-sm font-mono"
+            <div class="flex items-center gap-1.5 text-xs font-mono"
               :class="{
                 'text-error font-bold': getStatusKey(row) === 'late',
                 'text-info font-bold': getStatusKey(row) === 'maintenance',
                 'text-warning font-semibold': getStatusKey(row) === 'near',
-                'text-base-content': !['late', 'maintenance', 'near'].includes(getStatusKey(row))
+                'text-base-content/70': !['late', 'maintenance', 'near'].includes(getStatusKey(row))
               }">
-              <Icon icon="lucide:calendar-clock" class="w-4 h-4"
+              <Icon icon="lucide:calendar-clock" class="w-3.5 h-3.5"
                 :class="{
                   'text-error': getStatusKey(row) === 'late',
                   'text-info': getStatusKey(row) === 'maintenance',
                   'text-warning': getStatusKey(row) === 'near',
-                  'text-base-content/50': !['late', 'maintenance', 'near'].includes(getStatusKey(row))
+                  'opacity-60': !['late', 'maintenance', 'near'].includes(getStatusKey(row))
                 }" />
               <span>{{ formatDateHour(value) }}</span>
             </div>
-            <span v-if="row.intervalDays" class="text-[11px] text-primary font-mono pl-5">
+            <span v-if="row.intervalDays" class="text-[10px] text-primary font-mono font-bold pl-5">
               ({{ $t('notifMaintenance.daysCount', { days: row.intervalDays }) }})
             </span>
           </div>
@@ -95,16 +135,16 @@
         <!-- Daily Operating Count (Days & Hours) -->
         <template #cell-dayCount="{ value, row }">
           <div class="flex flex-col gap-0.5">
-            <div class="flex items-center gap-1.5 font-mono bg-base-200 px-2.5 py-1 rounded-md w-fit">
+            <div class="flex items-center gap-1.5 font-mono text-xs bg-base-200 border border-base-300 px-2 py-0.5 rounded-md w-fit">
               <Icon icon="lucide:timer" class="w-3.5 h-3.5 text-primary" />
               <span class="font-bold text-base-content">
                 {{ $t('notifMaintenance.daysCount', { days: value ?? 0 }) }}
               </span>
-              <span class="text-xs text-base-content/60">
+              <span class="text-[11px] text-base-content/60">
                 ({{ $t('notifMaintenance.hoursCount', { hours: (value ?? 0) * 24 }) }})
               </span>
             </div>
-            <span class="text-[11px] text-base-content/50 font-mono pl-1">
+            <span class="text-[10px] text-base-content/50 font-mono pl-0.5">
               {{ $t('notifMaintenance.targetDaysLabel', { total: getTotalTargetDays(row) }) }}
             </span>
           </div>
@@ -112,83 +152,118 @@
 
         <!-- Reason / Note -->
         <template #cell-reason="{ value }">
-          <div class="truncate max-w-[200px] text-sm text-base-content/80" :title="value">
+          <div class="truncate max-w-[200px] text-xs font-medium text-base-content/70" :title="value">
             {{ value || $t('notifMaintenance.noReason') }}
           </div>
         </template>
 
-        <!-- Status Badge: Counting (Green), Near Maintenance (Yellow), Maintenance / Time Met (Blue), Late (Red), Disabled -->
+        <!-- Status Pill -->
         <template #cell-status="{ row }">
-          <span v-if="getStatusKey(row) === 'disabled'"
-            class="badge badge-sm font-semibold badge-ghost text-base-content/40">
+          <!-- Disabled -->
+          <div v-if="getStatusKey(row) === 'disabled'"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-base-200 text-base-content/50 border border-base-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-base-content/30"></span>
             {{ $t('common.disabled') }}
-          </span>
-          <span v-else-if="getStatusKey(row) === 'late'"
-            class="badge badge-sm font-bold badge-error text-white shadow-sm">
+          </div>
+
+          <!-- Late -->
+          <div v-else-if="getStatusKey(row) === 'late'"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
             {{ $t('notifMaintenance.statusLate') }}
-          </span>
-          <span v-else-if="getStatusKey(row) === 'maintenance'"
-            class="badge badge-sm font-bold badge-info text-white shadow-sm">
+          </div>
+
+          <!-- Maintenance Due -->
+          <div v-else-if="getStatusKey(row) === 'maintenance'"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-info/10 text-info border border-info/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-info animate-pulse"></span>
             {{ $t('notifMaintenance.statusMaintenance') }}
-          </span>
-          <span v-else-if="getStatusKey(row) === 'near'"
-            class="badge badge-sm font-semibold badge-warning text-white shadow-sm">
+          </div>
+
+          <!-- Near Maintenance -->
+          <div v-else-if="getStatusKey(row) === 'near'"
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning/10 text-warning border border-warning/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
             {{ $t('notifMaintenance.statusNearMaintenance') }}
-          </span>
-          <span v-else class="badge badge-sm font-semibold badge-success text-white">
+          </div>
+
+          <!-- Counting (Normal) -->
+          <div v-else
+            class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success/10 text-success border border-success/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
             {{ $t('notifMaintenance.statusCounting') }}
-          </span>
+          </div>
         </template>
 
-        <!-- Actions -->
+        <!-- Minimal Icon Actions -->
         <template #cell-actions="{ row }">
-          <div class="flex justify-end gap-2">
-            <button @click="openEditModal(row)" class="btn btn-sm btn-primary">
-              <Icon icon="lucide:pencil" class="w-5 h-5" />
+          <div class="flex justify-end items-center gap-1">
+            <button 
+              @click="openEditModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-primary/10 transition-colors"
+              :title="$t('common.edit')">
+              <Icon icon="lucide:pencil" class="w-4 h-4" />
             </button>
-            <button @click="openDeleteModal(row)" class="btn btn-sm btn-error text-white">
-              <Icon icon="lucide:trash-2" class="w-5 h-5" />
+            <button 
+              @click="openDeleteModal(row)" 
+              class="btn btn-ghost btn-xs btn-square rounded-lg text-base-content/70 hover:text-error hover:bg-error/10 transition-colors"
+              :title="$t('common.delete')">
+              <Icon icon="lucide:trash-2" class="w-4 h-4" />
             </button>
           </div>
         </template>
       </TableData>
     </div>
 
-    <!-- Create / Edit Modal -->
-    <dialog ref="maintenanceModal" class="modal modal-bottom sm:modal-middle">
-      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 flex flex-col max-h-[90vh] shadow-2xl">
-        <div class="px-6 py-5 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
-          <h3 class="m-0 text-xl font-extrabold text-base-content flex items-center gap-2">
-            <Icon :icon="isEditing ? 'lucide:calendar-cog' : 'lucide:calendar-plus'" class="w-5 h-5 text-primary" />
-            {{ isEditing ? $t('notifMaintenance.editMaintenance') : $t('notifMaintenance.createMaintenance') }}
-          </h3>
+    <!-- Create / Edit Modal with Scrollable Body -->
+    <dialog ref="maintenanceModal" class="modal z-[200]">
+      <div class="modal-box sm:w-11/12 sm:max-w-xl p-0 overflow-hidden shadow-2xl rounded-2xl flex flex-col max-h-[88vh] border border-base-300 bg-base-100">
+        
+        <!-- Pinned Header -->
+        <div class="px-6 py-4 border-b border-base-200 bg-base-100 flex justify-between items-center shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-xl bg-primary/10 text-primary">
+              <Icon :icon="isEditing ? 'lucide:calendar-cog' : 'lucide:calendar-plus'" class="w-5 h-5" />
+            </div>
+            <div>
+              <h3 class="m-0 text-lg font-bold text-base-content">
+                {{ isEditing ? $t('notifMaintenance.editMaintenance') : $t('notifMaintenance.createMaintenance') }}
+              </h3>
+              <p class="m-0 text-xs text-base-content/50">
+                {{ $t('notifMaintenance.subtitle') }}
+              </p>
+            </div>
+          </div>
           <button type="button" class="btn btn-sm btn-circle btn-ghost" @click="closeModal">
             <Icon icon="lucide:x" class="w-4 h-4" />
           </button>
         </div>
 
-        <form @submit.prevent="submitForm" autocomplete="off" class="flex flex-col flex-1 min-h-0">
-          <div class="p-6 bg-base-100 flex flex-col gap-4 flex-1 overflow-y-auto min-h-0">
+        <!-- Form Wrapper -->
+        <form @submit.prevent="submitForm" autocomplete="off" class="flex flex-col flex-1 overflow-hidden bg-base-100">
+          <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
 
             <!-- Target Type Radio (Device or Group) -->
             <div class="form-control w-full">
               <div class="label pb-1.5">
-                <span class="label-text font-semibold">{{ $t('scheduler.targetType') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('scheduler.targetType') }}</span>
               </div>
-              <div class="flex gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2.5 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="device" class="radio radio-primary radio-sm" v-model="form.targetType"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.targetType === 'device' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="device" class="radio radio-primary radio-xs" v-model="form.targetType"
                     @change="handleTargetTypeChange" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:cpu" class="w-4 h-4" /> {{ $t('common.device') }}
                   </span>
                 </label>
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2.5 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="group" class="radio radio-primary radio-sm" v-model="form.targetType"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.targetType === 'group' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="group" class="radio radio-primary radio-xs" v-model="form.targetType"
                     @change="handleTargetTypeChange" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:layers" class="w-4 h-4" /> {{ $t('common.group') }}
                   </span>
                 </label>
@@ -198,18 +273,18 @@
             <!-- Target Device or Group Dropdown -->
             <div class="form-control w-full relative">
               <div class="label pb-1">
-                <span class="label-text font-semibold">
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
                   {{ form.targetType === 'device' ? $t('scheduler.selectTargetDevice') : $t('scheduler.selectTargetGroup') }}
+                  <span class="text-error ml-0.5">*</span>
                 </span>
-                <span class="label-text-alt text-error">*</span>
               </div>
 
               <template v-if="form.targetType === 'device'">
                 <SearchableDropdown v-model="form.deviceId" :options="realDeviceList" labelKey="deviceName"
                   valueKey="deviceId" :placeholder="$t('common.searchDevice')" :error="v$.deviceId.$error"
                   @blur="v$.deviceId.$touch()" />
-                <div v-if="v$.deviceId.$error" class="px-1 pt-1">
-                  <span class="text-xs text-error font-medium">
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.deviceId.$error" class="label-text-alt text-error font-medium text-xs">
                     {{ v$.deviceId.$errors[0].$message }}
                   </span>
                 </div>
@@ -219,8 +294,8 @@
                 <SearchableDropdown v-model="form.deviceGroupId" :options="groupList" labelKey="groupName"
                   valueKey="groupId" :placeholder="$t('common.searchGroup')" :error="v$.deviceGroupId.$error"
                   @blur="v$.deviceGroupId.$touch()" />
-                <div v-if="v$.deviceGroupId.$error" class="px-1 pt-1">
-                  <span class="text-xs text-error font-medium">
+                <div class="label px-1 py-0.5 min-h-[20px]">
+                  <span v-if="v$.deviceGroupId.$error" class="label-text-alt text-error font-medium text-xs">
                     {{ v$.deviceGroupId.$errors[0].$message }}
                   </span>
                 </div>
@@ -230,22 +305,24 @@
             <!-- Maintenance Schedule Mode: Select by Date vs Select by Days -->
             <div class="form-control w-full">
               <div class="label pb-1.5">
-                <span class="label-text font-semibold">{{ $t('notifMaintenance.dateSelectionMode') }}</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('notifMaintenance.dateSelectionMode') }}</span>
               </div>
-              <div class="flex gap-4">
+              <div class="grid grid-cols-2 gap-3">
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2.5 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="date" class="radio radio-primary radio-sm" v-model="form.dateMode"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.dateMode === 'date' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="date" class="radio radio-primary radio-xs" v-model="form.dateMode"
                     @change="handleDateModeChange" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:calendar" class="w-4 h-4" /> {{ $t('notifMaintenance.modeByDate') }}
                   </span>
                 </label>
                 <label
-                  class="label cursor-pointer justify-start gap-2 bg-base-200/50 p-2.5 rounded-lg border border-base-200 flex-1 hover:bg-base-200 transition-colors">
-                  <input type="radio" value="days" class="radio radio-primary radio-sm" v-model="form.dateMode"
+                  class="label cursor-pointer justify-start gap-2.5 p-3 rounded-xl border transition-all"
+                  :class="form.dateMode === 'days' ? 'bg-primary/10 border-primary text-primary font-bold' : 'bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200'">
+                  <input type="radio" value="days" class="radio radio-primary radio-xs" v-model="form.dateMode"
                     @change="handleDateModeChange" />
-                  <span class="label-text font-medium flex items-center gap-2">
+                  <span class="text-xs flex items-center gap-1.5">
                     <Icon icon="lucide:timer" class="w-4 h-4" /> {{ $t('notifMaintenance.modeByDays') }}
                   </span>
                 </label>
@@ -255,8 +332,10 @@
             <!-- Start Date (Hour-only precision: dd/MM/yyyy HH:00, defaults to current hour) -->
             <div class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('notifMaintenance.startDate') }}</span>
-                <span class="label-text-alt text-error">*</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ $t('notifMaintenance.startDate') }}
+                  <span class="text-error ml-0.5">*</span>
+                </span>
               </div>
               <VueDatePicker v-model="form.startDate" :is-24="true" :enable-time-picker="true"
                 :enable-minutes="false" :no-minutes-overlay="true" :minutes-increment="60" :minutes-grid-increment="60"
@@ -267,11 +346,11 @@
                 }" :placeholder="$t('notifMaintenance.selectStartDate')" teleport-center
                 @update:model-value="handleStartDateChange" @closed="v$.startDate.$touch()">
                 <template #input-icon>
-                  <Icon icon="lucide:calendar" class="w-5 h-5 ml-3 text-base-content/50" />
+                  <Icon icon="lucide:calendar" class="w-4 h-4 ml-3 text-base-content/50" />
                 </template>
               </VueDatePicker>
-              <div v-if="v$.startDate.$error" class="px-1 pt-1">
-                <span class="text-xs text-error font-medium">
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.startDate.$error" class="label-text-alt text-error font-medium text-xs">
                   {{ v$.startDate.$errors[0].$message }}
                 </span>
               </div>
@@ -280,8 +359,10 @@
             <!-- OPTION A: Select by Date (Hour-only precision: dd/MM/yyyy HH:00) -->
             <div v-if="form.dateMode === 'date'" class="form-control w-full">
               <div class="label pb-1">
-                <span class="label-text font-semibold">{{ $t('notifMaintenance.maintenanceDate') }}</span>
-                <span class="label-text-alt text-error">*</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                  {{ $t('notifMaintenance.maintenanceDate') }}
+                  <span class="text-error ml-0.5">*</span>
+                </span>
               </div>
               <VueDatePicker v-model="form.maintenanceDate" :is-24="true" :enable-time-picker="true"
                 :enable-minutes="false" :no-minutes-overlay="true" :minutes-increment="60" :minutes-grid-increment="60"
@@ -292,28 +373,30 @@
                 }" :placeholder="$t('notifMaintenance.selectMaintenanceDate')" teleport-center
                 @update:model-value="handleMaintenanceDateChange" @closed="v$.maintenanceDate.$touch()">
                 <template #input-icon>
-                  <Icon icon="lucide:calendar-clock" class="w-5 h-5 ml-3 text-base-content/50" />
+                  <Icon icon="lucide:calendar-clock" class="w-4 h-4 ml-3 text-base-content/50" />
                 </template>
               </VueDatePicker>
-              <div v-if="v$.maintenanceDate.$error" class="px-1 pt-1">
-                <span class="text-xs text-error font-medium">
+              <div class="label px-1 py-0.5 min-h-[20px]">
+                <span v-if="v$.maintenanceDate.$error" class="label-text-alt text-error font-medium text-xs">
                   {{ v$.maintenanceDate.$errors[0].$message }}
                 </span>
               </div>
             </div>
 
             <!-- OPTION B: Select by Days (e.g. in 180 days at selected hour HH:00) -->
-            <div v-else class="p-4 bg-base-200/50 rounded-xl border border-base-200 flex flex-col gap-3">
+            <div v-else class="p-4 bg-base-200/50 rounded-2xl border border-base-300 flex flex-col gap-3">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="form-control w-full">
                   <div class="label pb-1">
-                    <span class="label-text font-semibold">{{ $t('notifMaintenance.intervalDays') }}</span>
-                    <span class="label-text-alt text-error">*</span>
+                    <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">
+                      {{ $t('notifMaintenance.intervalDays') }}
+                      <span class="text-error ml-0.5">*</span>
+                    </span>
                   </div>
                   <input type="number" min="1" step="1" v-model.number="form.intervalDays"
                     @input="recalculateMaintenanceDateFromDays" @blur="v$.intervalDays.$touch()"
                     :placeholder="$t('notifMaintenance.intervalDaysPlaceholder')"
-                    :class="['input input-bordered w-full font-mono', { 'input-error': v$.intervalDays.$error }]" />
+                    :class="['input input-sm h-10 input-bordered w-full rounded-xl font-mono text-xs', { 'input-error': v$.intervalDays.$error }]" />
                   <div v-if="v$.intervalDays.$error" class="px-1 pt-1">
                     <span class="text-xs text-error font-medium">
                       {{ v$.intervalDays.$errors[0].$message }}
@@ -324,10 +407,10 @@
                 <!-- Hour-only selector (00:00 - 23:00, no minutes) -->
                 <label class="form-control w-full">
                   <div class="label pb-1">
-                    <span class="label-text font-semibold">{{ $t('notifMaintenance.alertTime') }}</span>
+                    <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('notifMaintenance.alertTime') }}</span>
                   </div>
                   <select v-model.number="form.alertHour" @change="recalculateMaintenanceDateFromDays"
-                    class="select select-bordered w-full font-mono">
+                    class="select select-sm h-10 select-bordered w-full rounded-xl font-mono text-xs">
                     <option v-for="h in 24" :key="h - 1" :value="h - 1">
                       {{ String(h - 1).padStart(2, '0') }}:00
                     </option>
@@ -338,8 +421,8 @@
               <!-- Quick Day Presets -->
               <div class="flex flex-wrap gap-1.5">
                 <button v-for="preset in [30, 60, 90, 180, 365]" :key="preset" type="button"
-                  class="btn btn-xs font-mono"
-                  :class="Number(form.intervalDays) === preset ? 'btn-primary text-white' : 'btn-outline border-base-300'"
+                  class="btn btn-xs rounded-lg font-mono font-bold transition-all"
+                  :class="Number(form.intervalDays) === preset ? 'btn-primary text-white' : 'btn-outline border-base-300 text-base-content/70 hover:bg-base-200'"
                   @click="setDayPreset(preset)">
                   +{{ preset }}d
                 </button>
@@ -347,20 +430,20 @@
 
               <!-- Calculated Maintenance Date Preview + Reset Cycle Button in Edit Mode -->
               <div
-                class="p-3 bg-base-100 rounded-lg border border-base-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                class="p-3 bg-base-100 rounded-xl border border-base-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
                 <div>
-                  <span class="text-xs text-base-content/60 font-semibold block">
+                  <span class="text-[11px] text-base-content/60 font-semibold block uppercase tracking-wider">
                     {{ $t('notifMaintenance.calculatedDueDate') }}
                   </span>
-                  <span class="font-mono font-bold text-primary text-sm">
+                  <span class="font-mono font-bold text-primary text-xs">
                     {{ form.maintenanceDate ? formatDateHour(form.maintenanceDate) : '-' }}
                   </span>
                 </div>
 
                 <!-- Reset Button in Edit Mode when Select by Days is active -->
                 <button v-if="isEditing && Number(form.intervalDays) > 0" type="button"
-                  class="btn btn-sm btn-warning text-white gap-1.5 shrink-0" @click="handleResetCycle">
-                  <Icon icon="lucide:rotate-ccw" class="w-4 h-4" />
+                  class="btn btn-xs btn-warning text-white rounded-lg gap-1.5 shrink-0 font-semibold" @click="handleResetCycle">
+                  <Icon icon="lucide:rotate-ccw" class="w-3.5 h-3.5" />
                   {{ $t('notifMaintenance.resetCycle', { days: form.intervalDays || 180 }) }}
                 </button>
               </div>
@@ -369,13 +452,13 @@
             <!-- Reason / Maintenance Note -->
             <div class="form-control w-full">
               <div class="label pb-1 flex justify-between">
-                <span class="label-text font-semibold">{{ $t('notifMaintenance.maintenanceNote') }}</span>
-                <span class="label-text-alt text-base-content/60 font-mono">{{ form.reason?.length || 0 }}/100</span>
+                <span class="label-text font-semibold text-xs uppercase tracking-wider text-base-content/70">{{ $t('notifMaintenance.maintenanceNote') }}</span>
+                <span class="label-text-alt text-base-content/50 font-mono text-xs">{{ form.reason?.length || 0 }}/100</span>
               </div>
               <input type="text" v-model="form.reason" maxlength="100" @blur="v$.reason.$touch()"
                 :placeholder="$t('notifMaintenance.maintenanceNotePlaceholder')"
-                :class="['input input-bordered w-full', { 'input-error': v$.reason.$error }]" />
-              <p class="m-0 mt-1.5 px-1 text-xs text-base-content/60 whitespace-normal break-words leading-relaxed">
+                :class="['input input-sm h-10 input-bordered w-full rounded-xl text-xs', { 'input-error': v$.reason.$error }]" />
+              <p class="m-0 mt-1.5 px-1 text-[11px] text-base-content/50 whitespace-normal break-words leading-relaxed">
                 {{ $t('notifMaintenance.maintenanceNoteDesc') }}
               </p>
               <div v-if="v$.reason.$error" class="px-1 pt-1">
@@ -386,26 +469,26 @@
             </div>
 
             <!-- Active Toggle -->
-            <div class="p-4 bg-base-200/40 rounded-xl border border-base-200 flex items-center justify-between gap-3">
+            <div class="p-3.5 bg-base-200/50 rounded-2xl border border-base-300 flex items-center justify-between gap-3">
               <div class="min-w-0">
-                <p class="font-bold text-base-content m-0 text-sm">{{ $t('notifMaintenance.maintenanceStatus') }}</p>
-                <p class="text-xs text-base-content/60 m-0 mt-1 whitespace-normal break-words">
+                <p class="font-bold text-base-content m-0 text-xs uppercase tracking-wider">{{ $t('notifMaintenance.maintenanceStatus') }}</p>
+                <p class="text-[11px] text-base-content/60 m-0 mt-0.5 whitespace-normal break-words">
                   {{ $t('notifMaintenance.maintenanceStatusDesc') }}
                 </p>
               </div>
-              <input type="checkbox" v-model="form.active" class="toggle toggle-success toggle-md shrink-0" />
+              <input type="checkbox" v-model="form.active" class="toggle toggle-success toggle-sm shrink-0" />
             </div>
 
           </div>
 
-          <!-- Modal Actions -->
-          <div class="px-6 py-4 border-t border-base-200 bg-base-100 flex justify-end gap-3 shrink-0">
-            <button type="button" class="btn btn-ghost" @click="closeModal" :disabled="isSaving">
+          <!-- Pinned Footer -->
+          <div class="border-t border-base-200 p-4 px-6 flex justify-end gap-2 shrink-0 bg-base-100">
+            <button type="button" class="btn btn-sm btn-ghost rounded-xl" @click="closeModal" :disabled="isSaving">
               {{ $t('common.cancel') }}
             </button>
-            <button type="submit" class="btn btn-primary px-8" :disabled="isSaving">
-              <span v-if="isSaving" class="loading loading-spinner loading-sm"></span>
-              {{ isEditing ? $t('common.save') : $t('notifMaintenance.createMaintenance') }}
+            <button type="submit" class="btn btn-sm btn-primary rounded-xl px-6 text-white font-semibold" :disabled="isSaving">
+              <span v-if="isSaving" class="loading loading-spinner loading-xs"></span>
+              {{ isEditing ? $t('common.save') :$t('notifMaintenance.createMaintenance') }}
             </button>
           </div>
         </form>
@@ -415,19 +498,20 @@
 
     <!-- Delete Confirmation Modal -->
     <dialog ref="deleteModal" class="modal z-[200]">
-      <div class="modal-box">
+      <div class="modal-box rounded-2xl border border-base-300 p-6">
         <h3 class="font-bold text-lg text-error flex items-center gap-2">
-          <Icon icon="lucide:alert-triangle" class="w-6 h-6" /> {{ $t('common.confirmDelete') }}
+          <Icon icon="lucide:alert-triangle" class="w-5 h-5" /> {{ $t('common.confirmDelete') }}
         </h3>
-        <p class="py-4 text-base-content/80">
+        <p class="py-3 text-sm text-base-content/80">
           {{ $t('notifMaintenance.deleteWarning', { name: itemToDelete ? getTargetDisplayName(itemToDelete) : '' }) }}
         </p>
-        <div class="modal-action">
-          <button type="button" @click="closeDeleteModal" class="btn btn-ghost" :disabled="isDeleting">
-            {{ $t('common.cancel') }}
+        <div class="modal-action mt-4">
+          <button type="button" @click="closeDeleteModal" class="btn btn-sm btn-ghost rounded-xl" :disabled="isDeleting">
+            {{ te('common.noCancel') ? $t('common.noCancel') :$t('common.cancel') }}
           </button>
-          <button type="button" @click="confirmDelete" class="btn btn-error text-white" :disabled="isDeleting">
-            <span v-if="isDeleting" class="loading loading-spinner loading-sm"></span> {{ $t('common.delete') }}
+          <button type="button" @click="confirmDelete" class="btn btn-sm btn-error text-white rounded-xl font-semibold px-6" :disabled="isDeleting">
+            <span v-if="isDeleting" class="loading loading-spinner loading-xs"></span>
+            {{ te('common.yesDelete') ? $t('common.yesDelete') :$t('common.delete') }}
           </button>
         </div>
       </div>
@@ -455,6 +539,7 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import NoAccess from '@/components/NoAccess.vue';
 import SearchableDropdown from '@/components/SearchableDropdown.vue';
 import TableData from '@/components/TableData.vue';
+import StatCardGroup from '@/components/StatCardGroup.vue';
 import { useErrorHandler } from '@/composables/useErrorHandler';
 
 const { handleError } = useErrorHandler();
@@ -480,6 +565,22 @@ const itemToDelete = ref(null);
 const maintenanceTableData = ref([]);
 const deviceList = ref([]);
 const groupList = ref([]);
+
+const copiedId = ref(null);
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    copiedId.value = text;
+    setTimeout(() => {
+      if (copiedId.value === text) {
+        copiedId.value = null;
+      }
+    }, 2000);
+  } catch (err) {
+    toast.error("Failed to copy ID.");
+  }
+};
 
 const snapToHour = (d) => {
   if (!d) return null;
@@ -625,8 +726,54 @@ const getStatusKey = (row) => {
   return 'counting';
 };
 
+// Dynamic bilingual summary stats matching v2 StatCardGroup
+const statCardsData = computed(() => {
+  const total = maintenanceTableData.value.length;
+  const countingCount = maintenanceTableData.value.filter(r => getStatusKey(r) === 'counting').length;
+  const nearCount = maintenanceTableData.value.filter(r => getStatusKey(r) === 'near').length;
+  const maintenanceCount = maintenanceTableData.value.filter(r => getStatusKey(r) === 'maintenance').length;
+  const lateCount = maintenanceTableData.value.filter(r => getStatusKey(r) === 'late').length;
+
+  return [
+    {
+      label: te('notifMaintenance.stats.total') ? t('notifMaintenance.stats.total') : t('scheduler.stats.total'),
+      value: total,
+      icon: 'lucide:wrench',
+      color: 'primary'
+    },
+    {
+      label: te('notifMaintenance.stats.counting') ? t('notifMaintenance.stats.counting') : t('notifMaintenance.statusCounting'),
+      value: countingCount,
+      icon: 'lucide:activity',
+      color: 'success',
+      valueClass: 'text-success'
+    },
+    {
+      label: te('notifMaintenance.stats.near') ? t('notifMaintenance.stats.near') : t('notifMaintenance.statusNearMaintenance'),
+      value: nearCount,
+      icon: 'lucide:clock',
+      color: 'warning',
+      valueClass: 'text-warning'
+    },
+    {
+      label: te('notifMaintenance.stats.maintenance') ? t('notifMaintenance.stats.maintenance') : t('notifMaintenance.statusMaintenance'),
+      value: maintenanceCount,
+      icon: 'lucide:calendar-check',
+      color: 'info',
+      valueClass: 'text-info'
+    },
+    {
+      label: te('notifMaintenance.stats.late') ? t('notifMaintenance.stats.late') : t('notifMaintenance.statusLate'),
+      value: lateCount,
+      icon: 'lucide:alert-circle',
+      color: 'error',
+      valueClass: 'text-error'
+    }
+  ];
+});
+
 const tableColumns = computed(() => [
-  { header: t('common.id'), accessorKey: 'maintenanceId', meta: { headerClass: 'w-16', cellClass: 'font-bold' } },
+  { header: t('common.id'), accessorKey: 'maintenanceId' },
   {
     header: t('scheduler.table.target'),
     id: 'target',
@@ -660,7 +807,7 @@ const tableColumns = computed(() => [
       return t('notifMaintenance.statusCounting');
     }
   },
-  { header: t('common.actions'), id: 'actions', enableSorting: false, meta: { headerClass: 'text-right w-28', cellClass: 'text-right' } }
+  { header: t('common.actions'), id: 'actions', enableSorting: false, meta: { headerClass: 'text-right', cellClass: 'text-right' } }
 ]);
 
 const nowInit = snapToHour(new Date());
@@ -804,6 +951,11 @@ const loadDevicesAndGroups = async () => {
   }
 };
 
+const loadData = async () => {
+  await loadDevicesAndGroups();
+  await loadTable();
+};
+
 const openCreateModal = () => {
   isEditing.value = false;
   editingMaintenanceId.value = null;
@@ -902,7 +1054,6 @@ const confirmDelete = async () => {
 
 onMounted(async () => {
   if (!hasPermission(mainMenuName, 'Display')) return;
-  await loadDevicesAndGroups();
-  await loadTable();
+  await loadData();
 });
 </script>

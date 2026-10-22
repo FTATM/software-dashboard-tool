@@ -1,5 +1,7 @@
 <template>
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 w-full">
+  <div 
+    class="grid grid-cols-2 gap-3 sm:gap-4 w-full"
+    :class="items.length === 5 ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-4'">
     <div 
       v-for="(item, index) in items" 
       :key="index"
@@ -14,7 +16,7 @@
 
       <!-- Metric Label & Value -->
       <div class="min-w-0 flex-1">
-        <span class="text-[11px] uppercase tracking-wider font-bold text-base-content/50 block truncate">
+        <span class="text-[11px] uppercase tracking-wider font-bold text-base-content/50 block truncate" :title="item.label">
           {{ item.label }}
         </span>
         <span 
@@ -47,7 +49,7 @@ const getIconColorClass = (color = 'primary') => {
     warning: 'bg-warning/10 text-warning',
     error: 'bg-error/10 text-error',
     ghost: 'bg-base-200 text-base-content/60',
-    line: 'bg-[#06c755]/10 text-[#06c755]' // Added LINE green brand color
+    line: 'bg-[#06c755]/10 text-[#06c755]'
   };
   return colorMap[color] || colorMap.primary;
 };
