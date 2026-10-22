@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/FTATM/software-dashboard-tool/internal/model"
 )
@@ -68,5 +69,33 @@ func (h *ScheduleEngineHandler) UnsyncSchedule(w http.ResponseWriter, r *http.Re
 		)
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *ScheduleEngineHandler) SyncMaintenance(w http.ResponseWriter, r *http.Request) {
+	var req model.SyncMaintenanceReq
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	if err := h.service.SyncMaintenance(context.Background(), req.MaintenanceId); err != nil {
+		http.Error(w, "Failed to sync maintenance cache", http.StatusInternalServerError)
+		slog.ErrorContext(r.Context(), "Failed to sync maintenance cache",
+			slog.Int("maintenanceId", req.MaintenanceId),
+			slog.String("track", err.Error()),
+		)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *ScheduleEngineHandler) UnsyncMaintenance(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	maintenanceId, err := strconv.Atoi(idStr)
+	if err != nil || maintenanceId <= 0 {
+		http.Error(w, "Invalid maintenance ID", http.StatusBadRequest)
+		return
+	}
+
+	h.service.UnsyncMaintenance(maintenanceId)
 	w.WriteHeader(http.StatusOK)
 }

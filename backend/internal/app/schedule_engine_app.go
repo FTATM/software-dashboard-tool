@@ -89,6 +89,7 @@ func InitializeScheduleEngine(ctx context.Context) (App, error) {
 
 	gatewayBaseURL := GetEnvOrDefault("DEVICE_GATEWAY_URL", "")
 	internalSecret := GetEnvOrDefault("INTERNAL_API_SECRET", "")
+	maintenanceNotifRepeat := GetEnvIntOrDefault("MAINTENANCE_NOTIF_REPEAT", 3)
 
 	s3Config := config.S3{
 		Url:         GetEnvOrDefault("S3_URL", ""),
@@ -103,11 +104,44 @@ func InitializeScheduleEngine(ctx context.Context) (App, error) {
 	deviceRepo := repo.NewDeviceRepository(db)
 	widgetRepo := repo.NewWidgetRepository(db)
 	auditLogRepo := repo.NewAuditLogRepository(db)
+	notificationRepo := repo.NewNotificationRepository(db)
 
 	gatewayClient := client.NewDeviceGatewayClient(gatewayBaseURL, internalSecret)
 	s3Client := client.NewS3Client(s3Config)
 
-	scheduleService, err := service.NewSchedulerEngineService(scheduleRepo, deviceRepo, gatewayClient, widgetRepo, s3Client, auditLogRepo)
+	lineClient := client.NewLineClient(config.Line{
+		LineChannelID:      GetEnvOrDefault("LINE_CHANNEL_ID", ""),
+		ChannelAccessToken: GetEnvOrDefault("LINE_CHANNEL_ACCESS_TOKEN", ""),
+	})
+
+	notificationClient := client.NewNotificationClient(
+		config.Sms{
+			Url:    GetEnvOrDefault("SMS_API_URL", ""),
+			Key:    GetEnvOrDefault("SMS_API_KEY", ""),
+			Secret: GetEnvOrDefault("SMS_API_SECRET", ""),
+			Sender: GetEnvOrDefault("SMS_SENDER", ""),
+		},
+		config.Email{
+			Host:       GetEnvOrDefault("MAIL_HOST", ""),
+			Port:       GetEnvOrDefault("MAIL_PORT", ""),
+			Encryption: GetEnvOrDefault("MAIL_ENCRYPTION", ""),
+			Username:   GetEnvOrDefault("MAIL_USERNAME", ""),
+			Password:   GetEnvOrDefault("MAIL_PASSWORD", ""),
+		},
+		lineClient,
+	)
+
+	scheduleService, err := service.NewSchedulerEngineService(
+		scheduleRepo,
+		deviceRepo,
+		gatewayClient,
+		widgetRepo,
+		s3Client,
+		auditLogRepo,
+		notificationRepo,
+		notificationClient,
+		maintenanceNotifRepeat,
+	)
 	if err != nil {
 		slog.Error("Failed to initialize service", slog.String("error", err.Error()))
 		os.Exit(1)

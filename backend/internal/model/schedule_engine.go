@@ -6,6 +6,10 @@ type SyncJobReq struct {
 	ScheduleId string
 }
 
+type SyncMaintenanceReq struct {
+	MaintenanceId int `json:"maintenanceId"`
+}
+
 type ScheduleEngineRepository interface {
 	GetById(ctx context.Context, id string) (*Schedule, error)
 	UpdateStatus(ctx context.Context, id, status string) error
@@ -16,6 +20,9 @@ type ScheduleEngineRepository interface {
 type ScheduleEngineService interface {
 	SyncJob(ctx context.Context, id string) error
 	CancelJob(schedID string) bool
+	SyncMaintenance(ctx context.Context, maintenanceId int) error
+	UnsyncMaintenance(maintenanceId int) bool
+	ExecuteMaintenanceCheck(ctx context.Context)
 	Start(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
@@ -23,4 +30,6 @@ type ScheduleEngineService interface {
 type ScheduleEngineClient interface {
 	SyncSchedule(ctx context.Context, scheduleID string) error
 	UnsyncSchedule(ctx context.Context, scheduleID string) error
+	SyncMaintenance(ctx context.Context, maintenanceId int) error
+	UnsyncMaintenance(ctx context.Context, maintenanceId int) error
 }

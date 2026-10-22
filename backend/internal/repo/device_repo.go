@@ -263,6 +263,55 @@ func (r *deviceRepo) GetByIdChartDeviceData(ctx context.Context, id int) (model.
 	return device, nil
 }
 
+func (r *deviceRepo) GetByIdsChartDeviceData(ctx context.Context, ids []int) (map[int]model.ChartDeviceData, error) {
+	const fname = "GetByIdsChartDeviceData"
+	result := make(map[int]model.ChartDeviceData, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	query := `
+		SELECT 
+			d.device_id,
+			d.device_name, 
+			COALESCE(ref.value_data, d.value_data)::float8 AS value_data, 
+			COALESCE(ref.updated_value_at, d.updated_value_at) AS updated_value_at,
+			d.raw_min, d.raw_max, d.eu_min, d.eu_max
+		FROM device d
+		LEFT JOIN device ref ON d.ref_device_id = ref.device_id AND ref.deleted_at IS NULL
+		WHERE d.device_id = ANY($1) AND d.deleted_at IS NULL
+	`
+	rows, err := r.db(ctx).Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var deviceId int
+		var d model.ChartDeviceData
+		if err := rows.Scan(
+			&deviceId,
+			&d.DeviceName,
+			&d.ValueData,
+			&d.UpdatedValueAt,
+			&d.RawMin,
+			&d.RawMax,
+			&d.EuMin,
+			&d.EuMax,
+		); err != nil {
+			return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+		}
+		result[deviceId] = d
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("[%s]>[%s]: %w", r.prefixError, fname, err)
+	}
+
+	return result, nil
+}
+
 func (r *deviceRepo) CountData(ctx context.Context, deviceIds []int, fromTime, toTime time.Time) (int, error) {
 	const fname = "CountData"
 	query := `

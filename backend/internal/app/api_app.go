@@ -163,7 +163,7 @@ func InitializeApi(ctx context.Context) (App, error) {
 		Role:         handler.NewRoleHandler(roleService),
 		Schedule:     handler.NewScheduleHandler(scheduleService, roleService, scheduleClient),
 		LogReport:    handler.NewLogReportHandler(logReportService),
-		Notification: handler.NewNotificationHandler(notificationService, roleService),
+		Notification: handler.NewNotificationHandler(notificationService, roleService, scheduleClient, deviceGatewayClient),
 		S3File:       handler.NewS3FileHandler(s3Client),
 	}
 

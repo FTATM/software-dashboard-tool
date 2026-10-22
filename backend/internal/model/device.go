@@ -144,6 +144,7 @@ type DeviceRepository interface {
 	Delete(ctx context.Context, deviceId int) error
 	GetProtocolType(ctx context.Context) ([]string, error)
 	GetByIdChartDeviceData(ctx context.Context, id int) (ChartDeviceData, error)
+	GetByIdsChartDeviceData(ctx context.Context, ids []int) (map[int]ChartDeviceData, error)
 	GetAggregatedData(ctx context.Context, deviceIds []int, fromTime, toTime time.Time, bucketInterval string) ([]DeviceDataLog, error)
 	GetRawData(ctx context.Context, deviceIds []int, fromTime, toTime time.Time, limit int) ([]DeviceDataLog, error)
 	CountData(ctx context.Context, deviceIds []int, fromTime, toTime time.Time) (int, error)

@@ -86,7 +86,7 @@
             </li>
 
             <!-- Notification Group -->
-            <li v-if="hasPermission('Notification User', 'Display') || hasPermission('Notification Device', 'Display')">
+            <li v-if="hasPermission('Notification User', 'Display') || hasPermission('Notification Device', 'Display')  || hasPermission('Notification Maintenance', 'Display')">
               <details class="dropdown" name="header-dropdown">
                 <summary
                   class="py-2 px-3 rounded-lg flex items-center gap-1.5 transition-colors hover:bg-base-200 cursor-pointer">
@@ -105,6 +105,12 @@
                     <router-link :to="{ name: 'notifDevicerule' }" @click="closeAllDropdowns"
                       active-class="!bg-primary/10 !text-primary font-bold" class="py-2 px-3 rounded-lg">
                       {{ $t('menu.notifDeviceRule') }}
+                    </router-link>
+                  </li>
+                  <li v-if="hasPermission('Notification Maintenance', 'Display')">
+                    <router-link :to="{ name: 'notifMaintenance' }" active-class="!text-primary !bg-primary/10 font-bold"
+                      @click="isSidebarOpen = false" class="py-2.5 px-4 rounded-lg">
+                      {{ $t('menu.notifMaintenance') }}
                     </router-link>
                   </li>
                 </ul>

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/smtp"
@@ -40,6 +41,9 @@ func (n *notificationClient) SendSms(ctx context.Context, smsUser []model.UserNo
 
 	for _, u := range smsUser {
 		tel := strings.TrimSpace(u.Tel)
+		if tel == "" {
+			continue
+		}
 		if after, ok := strings.CutPrefix(tel, "0"); ok {
 			tel = "66" + after
 		}
@@ -72,10 +76,11 @@ func (n *notificationClient) SendSms(ctx context.Context, smsUser []model.UserNo
 		if err != nil {
 			return fmt.Errorf("[%s]>[%s] request failed: %w", n.prefixError, fname, err)
 		}
-		defer resp.Body.Close()
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-			return fmt.Errorf("[%s]>[%s] returned unexpected status: %w", n.prefixError, fname, err)
+			return fmt.Errorf("[%s]>[%s] returned unexpected status: %d", n.prefixError, fname, resp.StatusCode)
 		}
 	}
 
@@ -85,38 +90,37 @@ func (n *notificationClient) SendSms(ctx context.Context, smsUser []model.UserNo
 func (n *notificationClient) SendEmail(ctx context.Context, emailUsers []model.UserNotificationSend) error {
 	const fname = "SendEmail"
 
-	// 1. Set up SMTP Authentication
 	auth := smtp.PlainAuth("", n.email.Username, n.email.Password, n.email.Host)
-
-	// Example: "smtp.gmail.com:587"
 	addr := fmt.Sprintf("%s:%s", n.email.Host, n.email.Port)
 
-	// 2. Loop through users and send emails
+	displayName := "Software Dashboard Tool System Alerts"
+	fromHeader := fmt.Sprintf("From: %s <%s>\r\n", displayName, n.email.Username)
+	subject := "Subject: SDT System Alert\r\n"
+	mime := "MIME-version: 1.0;\r\nContent-Type: text/plain; charset=\"UTF-8\";\r\n\r\n"
+
+	// Group recipients by message body so a single SMTP session delivers to all recipients sharing the same alert
+	recipientsByMsg := make(map[string][]string)
+	var msgOrder []string
+
 	for _, u := range emailUsers {
-		// Skip if the user doesn't have an email address configured
-		if u.Email == "" {
+		emailAddr := strings.TrimSpace(u.Email)
+		if emailAddr == "" {
 			continue
 		}
+		if _, exists := recipientsByMsg[u.Msg]; !exists {
+			msgOrder = append(msgOrder, u.Msg)
+		}
+		recipientsByMsg[u.Msg] = append(recipientsByMsg[u.Msg], emailAddr)
+	}
 
-		// 3. Construct the email headers and body
-		displayName := "Software Dashboard Tool System Alerts"
-
-		// ⚡ Add the From header using your friendly name and your Gmail Username
-		fromHeader := fmt.Sprintf("From: %s <%s>\r\n", displayName, n.email.Username)
-		subject := "Subject: SDT System Alert\r\n"
-		mime := "MIME-version: 1.0;\r\nContent-Type: text/plain; charset=\"UTF-8\";\r\n\r\n"
-
-		body := u.Msg
-
-		// Combine all parts into the final message payload
+	for _, body := range msgOrder {
+		recipients := recipientsByMsg[body]
+		if len(recipients) == 0 {
+			continue
+		}
 		msg := []byte(fromHeader + subject + mime + body)
-
-		// 4. Send the email via SMTP
-		// ⚡ Replace n.email.Sender with n.email.Username here!
-		err := smtp.SendMail(addr, auth, n.email.Username, []string{u.Email}, msg)
-		if err != nil {
-			// Return the error to be logged by the service
-			return fmt.Errorf("[%s]>[%s] failed to send email to %s: %w", n.prefixError, fname, u.Email, err)
+		if err := smtp.SendMail(addr, auth, n.email.Username, recipients, msg); err != nil {
+			return fmt.Errorf("[%s]>[%s] failed to send email batch: %w", n.prefixError, fname, err)
 		}
 	}
 
@@ -127,7 +131,6 @@ func (n *notificationClient) SendLine(ctx context.Context, lineUsers []model.Use
 	const fname = "SendLine"
 
 	for _, u := range lineUsers {
-		// Respect context cancellation (timeout or caller cancellation)
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("[%s]>[%s]: %w", n.prefixError, fname, err)
 		}
@@ -137,18 +140,15 @@ func (n *notificationClient) SendLine(ctx context.Context, lineUsers []model.Use
 			continue
 		}
 
-		// Skip users without a linked LINE account
 		lineUserToken := strings.TrimSpace(*u.LineUserToken)
 		if lineUserToken == "" {
 			continue
 		}
 
-		// Skip empty messages
 		if strings.TrimSpace(u.Msg) == "" {
 			continue
 		}
 
-		// Send push message via LineClient
 		if err := n.lineClient.SendPushMessage(lineUserToken, u.Msg); err != nil {
 			return fmt.Errorf("[%s]>[%s] failed to send LINE message to user token %s: %w", n.prefixError, fname, lineUserToken, err)
 		}

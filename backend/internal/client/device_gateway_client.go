@@ -146,3 +146,26 @@ func (c *deviceGatewayClient) InvalidateGroupCache(ctx context.Context, oldGroup
 	}
 	return nil
 }
+
+func (c *deviceGatewayClient) InvalidateRuleCache(ctx context.Context, deviceId int) error {
+	const fname = "InvalidateRuleCache"
+	url := fmt.Sprintf("%s/devicegateway/internal/clearcache?type=rule&id=%d", c.baseURL, deviceId)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", c.prefixError, fname, err)
+	}
+
+	req.Header.Set("X-Internal-Secret", c.internalSecret)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("[%s]>[%s]: %w", c.prefixError, fname, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("[%s]>[%s]: gateway returned unexpected status: %d", c.prefixError, fname, resp.StatusCode)
+	}
+	return nil
+}
