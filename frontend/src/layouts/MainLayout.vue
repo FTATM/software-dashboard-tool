@@ -108,8 +108,8 @@
                     </router-link>
                   </li>
                   <li v-if="hasPermission('Notification Maintenance', 'Display')">
-                    <router-link :to="{ name: 'notifMaintenance' }" active-class="!text-primary !bg-primary/10 font-bold"
-                      @click="isSidebarOpen = false" class="py-2.5 px-4 rounded-lg">
+                    <router-link :to="{ name: 'notifMaintenance' }" active-class="!bg-primary/10 !text-primary font-bold"
+                      @click="closeAllDropdowns" class="py-2 px-3 rounded-lg">
                       {{ $t('menu.notifMaintenance') }}
                     </router-link>
                   </li>
